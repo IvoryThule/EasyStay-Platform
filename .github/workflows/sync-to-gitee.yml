@@ -2,7 +2,7 @@ name: Sync to Gitee
 
 on:
   push:
-    branches: [ master ]  # 当向 master 分支推送时触发
+    branches: [ master, main ] # 包含 master 和 main，防止分支名不一致
   workflow_dispatch: # 允许在 GitHub Actions 页面手动触发
 
 jobs:
@@ -15,14 +15,19 @@ jobs:
           fetch-depth: 0 # 拉取所有历史
 
       - name: Mirror to Gitee
-        uses: wearerequired/git-mirror-action@v1
-        env:
-          # 从 Secrets 中读取配置
-          SSH_PRIVATE_KEY: ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
+        uses: Yikun/hub-mirror-action@master
         with:
-          # 源仓库：GitHub 当前仓库
-          source-repo: "https://github.com/${{ github.repository }}.git"
-          # 目标仓库：使用 HTTPS 协议 + 令牌认证的 Gitee 地址
-          destination-repo: "https://${{ secrets.GITEE_USER }}:${{ secrets.GITEE_TOKEN }}@gitee.com/IvoryThule/EasyStay-Platform.git"
-          # 如果目标仓库不存在，则创建（需要令牌有对应权限）
-          create-destination-repo: false # 设为 true 可自动创建（如果你有权限）
+          # 源端（GitHub）
+          src: github/IvoryThule
+          # 目标端（Gitee）
+          dst: gitee/IvoryThule
+          # Gitee 的私钥（对应 Secrets）
+          dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}
+          # Gitee 的 Token（用于创建仓库）
+          dst_token: ${{ secrets.GITEE_TOKEN }}
+          # 只同步当前仓库
+          static_list: "EasyStay-Platform"
+          # 强制更新（避免因为提交历史不一致导致的同步失败）
+          force_update: true
+          # 调试模式，如果出错可以看到更多信息
+          debug: true
