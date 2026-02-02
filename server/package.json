@@ -1,0 +1,4 @@
+﻿{
+  "_comment": "[依赖] express, sequelize, mysql2, dotenv, cors, pm2, multer",
+  "status": "待实现"
+}
