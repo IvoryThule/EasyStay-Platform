@@ -2,7 +2,7 @@ name: Sync to Gitee
 
 on:
   push:
-    branches: [ main, master ]  # 当向 master 分支推送时触发
+    branches: [ master ]  # 当向 master 分支推送时触发
   workflow_dispatch: # 允许在 GitHub Actions 页面手动触发
 
 jobs:
