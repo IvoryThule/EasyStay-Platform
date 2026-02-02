@@ -1,2 +1,17 @@
 ﻿# [运维] 编排 MySQL 8.0 容器的配置文件
-# 待实现。
+version: '3'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: easystay-db
+    # 端口设置为3307防止与服务器上其他MySQL实例冲突
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: OurMySQLPassword114514  # 你自己设置一个密码，记下来！
+      MYSQL_DATABASE: easystay
+      TZ: 'UTC'
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
