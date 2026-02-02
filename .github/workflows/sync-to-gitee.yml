@@ -1,8 +1,8 @@
 name: Sync to Gitee
 
 on:
-  push:
-    branches: [ master, main ] # 包含 master 和 main，防止分支名不一致
+  #push:
+    #branches: [ master, main ] # 包含 master 和 main，防止分支名不一致
   workflow_dispatch: # 允许在 GitHub Actions 页面手动触发
 
 jobs:
