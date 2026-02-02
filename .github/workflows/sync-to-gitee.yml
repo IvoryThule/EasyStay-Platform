@@ -1,0 +1,28 @@
+name: Sync to Gitee
+
+on:
+  push:
+    branches: [ main, master ]  # 当向 master 分支推送时触发
+  workflow_dispatch: # 允许在 GitHub Actions 页面手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 拉取所有历史
+
+      - name: Mirror to Gitee
+        uses: wearerequired/git-mirror-action@v1
+        env:
+          # 从 Secrets 中读取配置
+          SSH_PRIVATE_KEY: ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
+        with:
+          # 源仓库：GitHub 当前仓库
+          source-repo: "https://github.com/${{ github.repository }}.git"
+          # 目标仓库：使用 HTTPS 协议 + 令牌认证的 Gitee 地址
+          destination-repo: "https://${{ secrets.GITEE_USER }}:${{ secrets.GITEE_TOKEN }}@gitee.com/IvoryThule/EasyStay-Platform.git"
+          # 如果目标仓库不存在，则创建（需要令牌有对应权限）
+          create-destination-repo: false # 设为 true 可自动创建（如果你有权限）
