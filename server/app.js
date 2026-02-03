@@ -7,6 +7,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 路由
+const authRoutes = require('./src/routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
 app.get('/', (req, res) => {
     res.send('EasyStay Backend is Running on Port 3000!');
 });
