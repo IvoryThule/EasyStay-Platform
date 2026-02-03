@@ -43,16 +43,21 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log(`[LOGIN] 请求体:`, req.body);
 
     // 查找用户
     const user = await User.findOne({ where: { username } });
+    console.log(`[LOGIN] 查找用户:`, user ? `找到用户ID: ${user.id}` : '未找到用户');
     if (!user) {
+      console.warn(`[LOGIN] 用户不存在: ${username}`);
       return fail(res, 'Invalid username or password', 401);
     }
 
     // 验证密码
     const isMatch = await comparePassword(password, user.password);
+    console.log(`[LOGIN] 密码校验:`, isMatch ? '通过' : '失败');
     if (!isMatch) {
+      console.warn(`[LOGIN] 密码错误: ${username}`);
       return fail(res, 'Invalid username or password', 401);
     }
 
@@ -62,10 +67,11 @@ const login = async (req, res) => {
       process.env.JWT_SECRET || 'easystay_secret',
       { expiresIn: '24h' }
     );
+    console.log(`[LOGIN] 登录成功，签发Token:`, token.slice(0, 20) + '...');
 
     success(res, { token, user: { id: user.id, username: user.username, role: user.role } }, 'Login successful');
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('[LOGIN] Login error:', error);
     fail(res, 'Server error during login', 500);
   }
 };
