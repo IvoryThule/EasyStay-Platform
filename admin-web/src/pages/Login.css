@@ -1,51 +1,143 @@
-.login-container {
-  min-height: 100vh;
+/* Login.css */
+.login-wrapper {
+  background-color: #fff;
+}
+
+/* 1. 顶部 Hero 区域 - 保持大比例 */
+.login-hero, .register-hero {
+  position: relative;
+  height: 720px; /* 增加高度以容纳大框 */
+  background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), 
+              url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1920') no-repeat center center;
+  background-size: cover;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #4b72a2 100%);
-  padding: 20px;
 }
 
-.login-card {
-  width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  border: none;
+/* 容器布局 */
+.login-card-container, .register-card-container {
+  width: 100%;
+  max-width: 1400px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 80px;
 }
 
-.login-card .ant-card-head {
-  text-align: center;
-  border-bottom: 1px solid #f0f0f0;
+/* Slogan 文字 */
+.login-slogan h1, .register-slogan h1 {
+  font-size: 52px;
+  color: white;
+  font-weight: bold;
+  margin-bottom: 25px;
 }
 
-.login-card .ant-card-head-title {
+.login-slogan p, .register-slogan p {
   font-size: 24px;
-  font-weight: 600;
-  color: #1890ff;
+  color: white;
+  opacity: 0.9;
 }
 
-.login-card .ant-form-item {
+/* 登录/注册框 - 显著加大宽度至 520px */
+.custom-login-card, .custom-register-card {
+  width: 520px; 
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border: none !important;
+  padding: 20px 10px;
+}
+
+.ctrip-blue-btn {
+  background-color: #0086ff !important;
+  border-color: #0086ff !important;
+  height: 55px; 
+  font-size: 20px;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------ */
+/* 2. 下方介绍区域 - 恢复到之前的小图标尺寸 */
+/* ------------------------------------------------ */
+.info-section {
+  padding: 60px 0; /* 缩减内边距 */
+  text-align: center;
+  background: #fff;
+}
+
+.info-section h2 {
+  font-size: 28px; /* 标题恢复正常大小 */
+  margin-bottom: 10px;
+}
+
+.feature-grid {
+  display: flex;
+  justify-content: center;
+  gap: 80px;
+  margin-top: 40px;
+}
+
+.feature-item {
+  width: 120px; /* 限制单个项的宽度 */
+}
+
+.feature-item img {
+  width: 64px; /* 图标恢复为 64px (之前的大小) */
+  height: 64px;
+  margin-bottom: 15px;
+  object-fit: contain;
+}
+
+.feature-item p {
+  font-size: 16px; /* 文字恢复正常 */
+  color: #333;
+}
+
+/* 页脚区域 */
+
+.footer-info {
+  background: #f8f9fa; /* 浅灰色背景，符合截图感 */
+  padding: 60px 0 40px 0;
+  color: #333;
+  border-top: 1px solid #eee;
+}
+
+/* 确保底部内容水平居中 */
+.footer-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center; /* 水平居中 */
+  gap: 150px; /* 控制“联系我们”和“关于”之间的间距 */
+  text-align: left; /* 内部文字左对齐 */
+}
+
+/* 调大底部文字 */
+.footer-column h4 {
+  font-size: 20px; /* 标题加大 */
+  font-weight: bold;
   margin-bottom: 20px;
+  color: #000;
 }
 
-.login-card .ant-btn-primary {
-  height: 40px;
-  border-radius: 6px;
-  font-size: 16px;
+.footer-column p {
+  font-size: 16px; /* 正文加大 */
+  line-height: 1.8;
+  margin-bottom: 8px;
+  color: #666;
+  cursor: pointer;
 }
 
-.login-card .ant-btn-link {
-  color: #1890ff;
+.footer-column p:hover {
+  color: #0086ff;
 }
 
-.login-card .ant-btn-link:hover {
-  color: #40a9ff;
-}
-
-@media (max-width: 480px) {
-  .login-card {
-    width: 100%;
-    margin: 0 20px;
-  }
+/* 底部版权信息 */
+.footer-copyright {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 20px;
+  border-top: 1px solid #e8e8e8;
+  font-size: 14px;
+  color: #999;
 }
