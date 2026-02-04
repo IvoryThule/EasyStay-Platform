@@ -12,7 +12,8 @@ const Login = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
-  const onFinish = async (values) => {
+/* 后端
+ const onFinish = async (values) => {
     setLoading(true);
     try {
       const response = await request.post('/auth/login', values);
@@ -36,6 +37,39 @@ const Login = () => {
       setLoading(false);
     }
   };
+*/
+
+//纯前端演示
+const onFinish = async (values) => {
+    setLoading(true);
+    // --- 模拟后端开始 ---
+    setTimeout(() => {
+      const { username } = values;
+      let mockUser = null;
+
+      if (username === 'admin') {
+        mockUser = { role: 'admin', name: '管理员' };
+      } else {
+        mockUser = { role: 'merchant', name: '酒店商户' };
+      }
+
+      // 存储模拟数据
+      localStorage.setItem('admin_token', 'mock_token_123456');
+      localStorage.setItem('user_info', JSON.stringify(mockUser));
+
+      message.success(`欢迎回来, ${mockUser.name}！`);
+      
+      // 跳转逻辑
+      if (mockUser.role === 'admin') {
+        navigate('/hotel-audit');
+      } else {
+        navigate('/hotel-edit');
+      }
+      setLoading(false);
+    }, 1000);
+    // --- 模拟后端结束 ---
+  };
+//
 
   const handleRegister = () => {
     navigate(ROUTE_PATHS.REGISTER);
