@@ -1,5 +1,6 @@
 // 建表脚本及初始数据写入脚本
 const { sequelize, User, Hotel, RoomType } = require('./src/models');
+const { hashPassword, comparePassword } = require('./src/utils/passwordUtils');
 
 async function initDB() {
   try {
@@ -15,21 +16,21 @@ async function initDB() {
     // 管理员：普通用户名
     const admin = await User.create({ 
       username: 'admin', 
-      password: '123', 
+      password: await hashPassword('admin123'),
       role: 'admin' 
     });
 
     // 商户：使用邮箱作为 username
     const merchant = await User.create({ 
       username: 'boss@hotel.com', 
-      password: '123', 
+      password: await hashPassword('merchant123'),
       role: 'merchant' 
     });
 
     // 普通用户：使用手机号作为 username
     const user = await User.create({ 
       username: '13800138000', 
-      password: '123', 
+      password: await hashPassword('user123'), 
       role: 'user' 
     });
 
@@ -73,9 +74,9 @@ async function initDB() {
     console.log(`
     🎉 初始化成功！数据库已重置。
     ---------------------------------------------
-    [管理员] 账号: admin           密码: 123
-    [商 户] 账号: boss@hotel.com  密码: 123
-    [用 户] 账号: 13800138000     密码: 123
+    [管理员] 账号: admin           密码: admin123
+    [商 户] 账号: boss@hotel.com  密码: merchant123
+    [用 户] 账号: 13800138000     密码: user123
     ---------------------------------------------
     `);
     process.exit(0);
