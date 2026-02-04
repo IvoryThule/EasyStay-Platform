@@ -9,7 +9,11 @@ app.use(express.json());
 
 // 路由
 const authRoutes = require('./src/routes/authRoutes');
+const hotelRoutes = require('./src/routes/hotelRoutes');
+const uploadRoutes = require('./src/routes/uploadRoutes'); // Inserted
 app.use('/api/auth', authRoutes);
+app.use('/api/hotel', hotelRoutes);
+app.use('/api/upload', uploadRoutes); // Inserted
 
 app.get('/', (req, res) => {
     res.send('EasyStay Backend is Running on Port 3000!');
