@@ -1,4 +1,4 @@
-﻿{
+{
   "_comment": "[依赖] react, react-dom, antd, axios, react-router-dom",
   "name": "easystay-admin-web",
   "private": true,
