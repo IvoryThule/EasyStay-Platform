@@ -1,2 +1,3 @@
-﻿// [页面配置] 详情页
-// 待实现。
+﻿export default definePageConfig({
+  navigationBarTitleText: 'Page'
+})
