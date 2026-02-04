@@ -8,6 +8,8 @@ WEBROOT="$PROJECT_ROOT/current"         # Nginx 指向的静态资源目录
 SERVER_DIR="$REPO_DIR/server"
 ADMIN_DIR="$REPO_DIR/admin-web"
 MOBILE_DIR="$REPO_DIR/mobile-app"
+NGINX_CONF_SRC="$REPO_DIR/deploy/nginx.conf"  # 仓库里的配置源文件
+NGINX_CONF_DEST="/etc/nginx/sites-enabled/easystay" # Nginx 启用的配置位置
 
 BRANCH="master"
 WWW_USER="www-data"
@@ -72,5 +74,25 @@ rsync -a --delete "$MOBILE_DIR/dist/" "$WEBROOT/mobile/"
 echo ">>> Step 5: 修正权限..." | tee -a "$LOGFILE"
 chown -R $USER:$WWW_USER "$WEBROOT"
 chmod -R 755 "$WEBROOT"
+
+# === 6.Nginx 配置更新 ===
+echo ">>> Step 6: 更新 Nginx 配置..." | tee -a "$LOGFILE"
+if [ -f "$NGINX_CONF_SRC" ]; then
+    # 创建软链接：直接链接到 sites-enabled，覆盖旧的
+    # 注意：这里直接覆盖了原来的配置
+    ln -sf "$NGINX_CONF_SRC" "$NGINX_CONF_DEST"
+    
+    # 测试配置是否正确
+    echo "测试 Nginx 配置..."
+    if nginx -t; then
+        echo "配置正确，重载 Nginx..."
+        systemctl reload nginx
+    else
+        echo "错误: Nginx 配置测试失败，请检查 deploy/nginx.conf" | tee -a "$LOGFILE"
+        # 不退出脚本，以免中断后续流程，但需要手动检查
+    fi
+else
+    echo "警告: 未找到 $NGINX_CONF_SRC，跳过 Nginx 更新" | tee -a "$LOGFILE"
+fi
 
 echo -e "\033[0;32m=== 部署完成 ===\033[0m" | tee -a "$LOGFILE"
