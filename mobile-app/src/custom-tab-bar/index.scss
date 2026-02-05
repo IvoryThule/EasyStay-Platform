@@ -1,0 +1,59 @@
+.custom-tab-bar {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 120px;  // 总高度
+  z-index: 9999;
+  background: transparent;
+
+  .tab-bar-wrap {
+    display: flex;
+    align-items: center;
+    height: 80px;
+    margin-top: 40px;  // 为AI按钮留出空间
+    background: #ffffff;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    padding: 0 10px;
+    box-sizing: border-box;
+
+    .tab-bar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      
+      &.active {
+        .tab-bar-text {
+          color: #e6c98a !important;
+        }
+      }
+
+      .tab-bar-icon {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 4px;
+      }
+
+      .tab-bar-text {
+        font-size: 20px;
+        color: #666;
+      }
+    }
+  }
+
+  .ai-float-btn {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+  }
+}
