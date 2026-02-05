@@ -1,7 +1,8 @@
 ﻿// [配置] Sequelize 连接 MySQL 的实例配置
 const { Sequelize } = require('sequelize');
-// 引入 dotenv 以读取根目录下的 .env 文件变量
-require('dotenv').config();
+const path = require('path');
+// 引入 dotenv 并显式指定 server/.env 路径，避免不同 cwd 导致找不到变量
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 // 从环境变量获取配置，如果没读取到则使用默认值
 const DB_NAME = process.env.DB_NAME || 'easystay';
@@ -21,6 +22,15 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   port: DB_PORT,
   dialect: 'mysql', // 指定数据库类型
   
+  // 设置字符集，确保支持中文和Emoji
+  dialectOptions: {
+    charset: 'utf8mb4',
+  },
+  define: {
+    charset: 'utf8mb4',
+    collate: 'utf8mb4_0900_ai_ci',
+  },
+  
   // 设置时区为东八区(北京时间)
   timezone: '+08:00',
   
@@ -34,6 +44,25 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
     min: 0,     // 连接池中最小连接数量
     acquire: 30000, // 在抛出错误前，尝试获取连接的毫秒数
     idle: 10000     // 如果一个连接池 10秒 没被使用，则释放
+  },
+
+  // 强制会话层字符集，避免写入时中文变成 ?
+  hooks: {
+    afterConnect: (conn) => {
+      // mysql2 原生连接的 query 不是 Promise 风格
+      if (conn && typeof conn.promise === 'function') {
+        return conn.promise().query("SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci");
+      }
+      if (conn && typeof conn.query === 'function') {
+        return new Promise((resolve, reject) => {
+          conn.query("SET NAMES utf8mb4 COLLATE utf8mb4_0900_ai_ci", (err) => {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
+      }
+      return undefined;
+    }
   }
 });
 

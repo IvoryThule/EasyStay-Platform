@@ -5,6 +5,7 @@ const { hashPassword, comparePassword } = require('./src/utils/passwordUtils');
 async function initDB() {
   try {
     console.log('🔄 正在连接数据库...');
+    await sequelize.query("ALTER DATABASE easystay CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci");
     // force: true 表示如果表存在，则删除重建
     await sequelize.sync({ force: true });
     console.log('✅ 表结构同步完成！');
