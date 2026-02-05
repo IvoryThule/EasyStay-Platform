@@ -1,5 +1,6 @@
 ﻿import { View, Text } from '@tarojs/components'
 import { useLoad } from '@tarojs/taro'
+import CustomTabBar from '../../custom-tab-bar'
 import './index.scss'
 
 export default function Page() {
@@ -9,7 +10,8 @@ export default function Page() {
 
   return (
     <View className='index'>
-      <Text>Page Content</Text>
+      <Text>我的内容</Text>
+      <CustomTabBar currentIndex={4} />
     </View>
   )
 }
