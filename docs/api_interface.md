@@ -281,3 +281,67 @@
       }
     }
     ```
+
+## 4. 订单 (Order)
+
+### 4.1 创建订单 (需 Login)
+*   **URL**: `/order/create`
+*   **Method**: `POST`
+*   **Body**:
+    ```json
+    {
+      "hotel_id": 1,
+      "room_type_id": 101,
+      "check_in": "2026-02-14",
+      "check_out": "2026-02-15"
+    }
+    ```
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "Order created successfully",
+      "data": {
+        "orderId": 55
+      }
+    }
+    ```
+
+### 4.2 我的订单列表 (需 Login)
+*   **URL**: `/order/list`
+*   **Method**: `GET`
+*   **Query**: `status` (可选: 0=待支付, 1=已预订, 2=已取消)
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "data": [
+        {
+          "id": 55,
+          "status": 0,
+          "check_in": "2026-02-14",
+          "check_out": "2026-02-15",
+          "Hotel": {
+            "name": "Hilton Shanghai",
+            "cover_image": "..."
+          },
+          "RoomType": {
+            "name": "豪华大床房",
+            "price": "399.00"
+          }
+        }
+      ]
+    }
+    ```
+
+### 4.3 支付订单 (模拟)
+*   **URL**: `/order/pay`
+*   **Method**: `POST`
+*   **Body**: `{"orderId": 55}`
+*   **Response**: 200 OK (状态变更为 1)
+
+### 4.4 取消订单
+*   **URL**: `/order/cancel`
+*   **Method**: `POST`
+*   **Body**: `{"orderId": 55}`
+*   **Response**: 200 OK (状态变更为 2，且自动恢复库存)

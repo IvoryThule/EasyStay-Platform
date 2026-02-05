@@ -13,12 +13,14 @@ const hotelRoutes = require('./src/routes/hotelRoutes');
 const uploadRoutes = require('./src/routes/uploadRoutes');
 const systemRoutes = require('./src/routes/systemRoutes');
 const aiRoutes = require('./src/routes/aiRoutes');
+const orderRoutes = require('./src/routes/orderRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/hotel', hotelRoutes);
 app.use('/api/upload', uploadRoutes); // 图片上传
 app.use('/api/system', systemRoutes); // IP定位
 app.use('/api/ai', aiRoutes);         // GLM AI服务
+app.use('/api/order', orderRoutes);   // 订单服务
 
 app.get('/', (req, res) => {
     res.send('EasyStay Backend is Running on Port 3000!');
