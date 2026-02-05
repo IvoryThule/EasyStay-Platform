@@ -25,12 +25,10 @@ const onFinish = async (values) => {
       localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(response.data.user));
       message.success(response.msg || '登录成功！'); // 使用后端返回的 msg
       
-      // 根据角色执行跳转 
-      if (response.data.user.role === 'admin') {
-        navigate(ROUTE_PATHS.HOTEL_AUDIT);
-      } else {
-        navigate(ROUTE_PATHS.HOTEL_EDIT);
-      }
+      // 执行跳转 
+      
+        navigate(ROUTE_PATHS.DASHBOARD);
+      
     } else {
       // 如果后端返回了 200 以外的 code，提示错误信息
       message.error(response.msg || '登录失败');

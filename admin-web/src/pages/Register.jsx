@@ -3,6 +3,8 @@ import React from 'react';
 import { Form, Input, Button, Card, message, Select } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import request from '../utils/request'; // 确保路径指向request.js
+import { ROUTE_PATHS, STORAGE_KEYS } from '../utils/constants';
 import './Register.css';
 import './Login.css'; // 复用登录页的部分介绍区样式
 
@@ -13,22 +15,31 @@ const Register = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
-  
-   const onFinish = async (values) => {
-    setLoading(true);
-    try {
-      const response = await request.post('/auth/register', values);
+const onFinish = async (values) => {
+  setLoading(true);
+  try {
+    const res = await request.post('/auth/register', values);
+    
+    // 统一使用 code === 200 或 res.status === 200 进行判断
+    if (res.code === 200 || res.success) { 
+      message.success(res.msg || res.message || '注册成功！请登录');
       
-      if (response.success) {
-        message.success('注册成功！请登录');
-        navigate(ROUTE_PATHS.LOGIN);
-      }
-    } catch (error) {
-      message.error(error.response?.data?.message || '注册失败，请重试');
-    } finally {
-      setLoading(false);
+      // 清理旧数据
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+      
+      // 跳转到登录页
+      navigate(ROUTE_PATHS.LOGIN);
+    } else {
+      // 这里的 res.message 根据后端实际字段（可能是 res.msg）来取
+      message.error(res.msg || res.message || '注册失败');
     }
-  };
+  } catch (error) {
+    // 错误处理
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleLogin = () => {
     navigate(ROUTE_PATHS.LOGIN);

@@ -1,5 +1,5 @@
 ﻿// [页面] 欢迎页/仪表盘
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Button, Typography, Space, Divider } from 'antd';
 import { 
   CloudUploadOutlined, 
@@ -40,7 +40,7 @@ const Dashboard = () => {
       </div>
 
       {/* 欢迎语 */}
-      <Card bordered={false} style={{ marginBottom: 24, borderRadius: 8 }}>
+      <Card variant="borderless" style={{ marginBottom: 24, borderRadius: 8 }}>
         <Text strong style={{ fontSize: 18 }}>您好，{userInfo.username}！</Text>
         <p style={{ color: '#999', marginTop: 8 }}>欢迎使用易宿 eBooking 酒店后台管理系统。您上次登录时间为：{userInfo.lastLogin}</p>
       </Card>
@@ -48,13 +48,13 @@ const Dashboard = () => {
       {/* 数据统计栏 (携程风格统计) */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={isAdmin ? 12 : 8}>
-          <Card bordered={false} hoverable>
+          <Card variant="borderless" hoverable>
             <Statistic title={isAdmin ? "待审核申请" : "今日预订量"} value={isAdmin ? 8 : 124} valueStyle={{ color: '#0086ff' }} />
           </Card>
         </Col>
         {!isAdmin && (
           <Col span={8}>
-            <Card bordered={false} hoverable>
+            <Card variant="borderless" hoverable>
               <Statistic title="本月总营收" value={85600} prefix="￥" valueStyle={{ color: '#cf1322' }} />
             </Card>
           </Col>
