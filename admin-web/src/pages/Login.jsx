@@ -1,10 +1,10 @@
 ﻿// [页面] 登录页
 import React from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
+import { Form, Input, Button, Card, message, Row, Col } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { STORAGE_KEYS, ROUTE_PATHS } from '../utils/constants';
 import { useNavigate } from 'react-router-dom';
-import request from '../utils/request'; 
+import request from '../utils/request';
+import { STORAGE_KEYS, ROUTE_PATHS } from '../utils/constants';
 import './Login.css';
 
 const Login = () => {
@@ -12,38 +12,35 @@ const Login = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
-  
- // pages/Login.jsx
-const onFinish = async (values) => {
-  setLoading(true);
-  try {
-    const response = await request.post('/auth/login', values); 
-    
-    // 修改这里：检查 code 是否为 200
-    if (response.code === 200) { 
-      // 存储 Token 和用户信息
-      localStorage.setItem(STORAGE_KEYS.TOKEN, response.data.token);
-      localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(response.data.user));
-      message.success(response.msg || '登录成功！'); // 使用后端返回的 msg
+  const onFinish = async (values) => {
+    setLoading(true);
+    try {
+      const response = await request.post('/auth/login', values);
       
-      // 根据角色执行跳转 
-      if (response.data.user.role === 'admin') {
-        navigate(ROUTE_PATHS.HOTEL_AUDIT);
-      } else {
-        navigate(ROUTE_PATHS.HOTEL_EDIT);
+      if (response.success) {
+        localStorage.setItem(STORAGE_KEYS.TOKEN, response.data.token);
+        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(response.data.user));
+        
+        message.success('登录成功！');
+        
+        // 根据角色自动跳转
+        if (response.data.user.role === 'admin') {
+          navigate(ROUTE_PATHS.HOTEL_AUDIT);
+        } else {
+          navigate(ROUTE_PATHS.HOTEL_EDIT);
+        }
       }
-    } else {
-      // 如果后端返回了 200 以外的 code，提示错误信息
-      message.error(response.msg || '登录失败');
+    } catch (error) {
+      message.error(error.response?.data?.message || '登录失败，请检查账号密码');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    // 捕获网络错误或 axios 拦截器抛出的错误
-    message.error(error.response?.data?.msg || '账号或密码错误');
-  } finally {
-    setLoading(false);
-  }
-};
-//
+  };
+
+  const handleRegister = () => {
+    navigate(ROUTE_PATHS.REGISTER);
+  };
+
   return (
     <div className="login-wrapper">
       {/* 1. 顶部 Hero 区域 */}
