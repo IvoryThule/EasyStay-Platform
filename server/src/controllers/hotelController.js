@@ -212,9 +212,138 @@ const update = async (req, res) => {
   }
 };
 
+/**
+ * 软删除酒店 (商户/管理员)
+ * POST /api/hotel/delete
+ * Body: { id: 1 }
+ */
+const deleteHotel = async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return fail(res, 'Hotel ID is required', 400);
+
+    const hotel = await Hotel.findByPk(id);
+    if (!hotel) return fail(res, 'Hotel not found', 404);
+
+    const isOwner = req.user.id === hotel.merchant_id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return fail(res, 'Forbidden', 403);
+    }
+
+    // 软删除：设置 status = 3 (下线/回收站)
+    await hotel.update({ status: 3 });
+
+    success(res, null, 'Hotel deleted (offline) successfully');
+  } catch (error) {
+    console.error('Delete Hotel Error:', error);
+    fail(res, 'Failed to delete hotel', 500);
+  }
+};
+
+// ================= 房型管理 (RoomType) =================
+
+/**
+ * 添加房型
+ * POST /api/hotel/roomtype/add
+ * Body: { hotel_id, name, price, stock }
+ */
+const addRoomType = async (req, res) => {
+  try {
+    const { hotel_id, name, price, stock } = req.body;
+
+    if (!hotel_id || !name || !price) {
+      return fail(res, 'Missing required fields', 400);
+    }
+
+    // 检查是否有权给该酒店加房型
+    const hotel = await Hotel.findByPk(hotel_id);
+    if (!hotel) return fail(res, 'Hotel not found', 404);
+
+    const isOwner = req.user.id === hotel.merchant_id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) return fail(res, 'Forbidden', 403);
+
+    const roomType = await RoomType.create({
+      hotel_id, name, price, stock: stock || 0
+    });
+
+    success(res, roomType, 'Room type added successfully');
+  } catch (error) {
+    console.error('Add RoomType Error:', error);
+    fail(res, 'Failed to add room type', 500);
+  }
+};
+
+/**
+ * 更新房型
+ * POST /api/hotel/roomtype/update
+ * Body: { id, name, price, stock }
+ */
+const updateRoomType = async (req, res) => {
+  try {
+    const { id, ...updateFields } = req.body;
+    if (!id) return fail(res, 'RoomType ID is required', 400);
+
+    const roomType = await RoomType.findByPk(id);
+    if (!roomType) return fail(res, 'RoomType not found', 404);
+
+    // 权限检查：查所属酒店
+    const hotel = await Hotel.findByPk(roomType.hotel_id);
+    if (!hotel) return fail(res, 'Associated Hotel not found', 404);
+
+    const isOwner = req.user.id === hotel.merchant_id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) return fail(res, 'Forbidden', 403);
+
+    delete updateFields.hotel_id; // 禁止改归属酒店
+    delete updateFields.id;
+
+    await roomType.update(updateFields);
+
+    success(res, roomType, 'Room type updated successfully');
+  } catch (error) {
+    console.error('Update RoomType Error:', error);
+    fail(res, 'Failed to update room type', 500);
+  }
+};
+
+/**
+ * 删除房型
+ * POST /api/hotel/roomtype/delete
+ * Body: { id }
+ */
+const deleteRoomType = async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return fail(res, 'RoomType ID is required', 400);
+
+    const roomType = await RoomType.findByPk(id);
+    if (!roomType) return fail(res, 'RoomType not found', 404);
+
+    const hotel = await Hotel.findByPk(roomType.hotel_id);
+    const isOwner = req.user.id === hotel.merchant_id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) return fail(res, 'Forbidden', 403);
+
+    await roomType.destroy(); // 硬删除
+
+    success(res, null, 'Room type deleted successfully');
+  } catch (error) {
+    console.error('Delete RoomType Error:', error);
+    fail(res, 'Failed to delete room type', 500);
+  }
+};
+
 module.exports = {
   create,
   list,
   getDetail,
-  update
+  update,
+  deleteHotel,
+  addRoomType,
+  updateRoomType,
+  deleteRoomType
 };
+

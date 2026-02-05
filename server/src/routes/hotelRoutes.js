@@ -43,4 +43,31 @@ router.post('/update',
   hotelController.update
 );
 
+// 商户/管理员删除(下架)酒店
+router.post('/delete', 
+  authMiddleware, 
+  requireRole(['merchant', 'admin']), 
+  hotelController.deleteHotel
+);
+
+// === 房型管理 ===
+
+router.post('/roomtype/add', 
+  authMiddleware, 
+  requireRole(['merchant', 'admin']), 
+  hotelController.addRoomType
+);
+
+router.post('/roomtype/update', 
+  authMiddleware, 
+  requireRole(['merchant', 'admin']), 
+  hotelController.updateRoomType
+);
+
+router.post('/roomtype/delete', 
+  authMiddleware, 
+  requireRole(['merchant', 'admin']), 
+  hotelController.deleteRoomType
+);
+
 module.exports = router;

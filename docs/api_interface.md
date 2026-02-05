@@ -161,6 +161,78 @@
     ```
 *   **Response**: 更新后的对象。注意：商户更新后状态会重置为 0 (审核中)。
 
+### 2.5 删除酒店 (软删除)
+*   **URL**: `/hotel/delete`
+*   **Method**: `POST`
+*   **Headers**: `Authorization: Bearer <token>`
+*   **Body**:
+    ```json
+    {
+      "id": 1
+    }
+    ```
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "Hotel deleted (offline) successfully",
+      "data": null
+    }
+    ```
+
+### 2.6 添加房型 (Add RoomType)
+*   **URL**: `/hotel/roomtype/add`
+*   **Method**: `POST`
+*   **Headers**: `Authorization: Bearer <token>`
+*   **Body**:
+    ```json
+    {
+      "hotel_id": 1,
+      "name": "豪华大床房",
+      "price": 399,
+      "stock": 10
+    }
+    ```
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "Room type added successfully",
+      "data": { "id": 5, "hotel_id": 1, "name": "豪华大床房", ... }
+    }
+    ```
+
+### 2.7 更新房型 (Update RoomType)
+*   **URL**: `/hotel/roomtype/update`
+*   **Method**: `POST`
+*   **Body**:
+    ```json
+    {
+      "id": 5,
+      "name": "豪华大床房 (含早)",
+      "price": 420
+    }
+    ```
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "Room type updated successfully",
+      "data": { ... }
+    }
+    ```
+
+### 2.8 删除房型 (Delete RoomType)
+*   **URL**: `/hotel/roomtype/delete`
+*   **Method**: `POST`
+*   **Body**:
+    ```json
+    {
+      "id": 5
+    }
+    ```
+*   **Response**: 200 OK
+
 ## 3. 文件上传
 
 ### 3.1 上传图片
