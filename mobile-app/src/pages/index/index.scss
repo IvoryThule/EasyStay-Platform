@@ -361,33 +361,54 @@ $font-weight-bold: 700;
         }
       }
       
-      &.filter-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding-bottom: 8px; // 参照HTML中的pb-2
-        
-        .filter-content {
-          display: flex;
-          align-items: center;
-          gap: 12px; // 参照HTML中的space-x-3
-          
-          .filter-icon {
-            font-size: $font-size-xl; // 放大
-            color: $text-light;
-          }
-          
-          .filter-text {
-            font-size: $font-size-base; // 放大
-            color: $text-light;
-          }
-        }
-        
-        .filter-arrow {
-          font-size: $font-size-lg;
-          color: #D1D5DB; // 参照HTML中的text-gray-300
-        }
+// 搜索区域内部
+&.filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 0; // 增加上下内边距
+  cursor: pointer;
+
+  .filter-content {
+    display: flex;
+    align-items: center;
+    gap: 16px; // 对应 $font-size-sm 级别的间距
+    flex: 1;
+
+    .filter-icon {
+      font-size: 32px; // 放大图标，保持与位置图标一致
+      color: $primary-color; // 改为蓝色系更醒目
+    }
+
+    .filter-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .filter-label {
+        font-size: $font-size-sm; // 20px
+        color: $text-light;
+        text-transform: uppercase;
       }
+
+      .filter-value {
+        font-size: $font-size-base; // 24px
+        color: $text-primary;
+        font-weight: $font-weight-medium;
+        // 增加单行截断，防止筛选条件过多撑破容器
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 400px; 
+      }
+    }
+  }
+
+        .filter-arrow {
+            font-size: $font-size-lg;
+            color: $border-color;
+        }
+}
       
       // 房间数量样式（入住人数已删除）
       &.rooms-row {
@@ -907,4 +928,101 @@ $font-weight-bold: 700;
 // 安全区域适配（针对全面屏手机）
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 1. 弹窗容器与标题 */
+.filter-popup-content {
+  background-color: $bg-white;
+  padding: 30px;
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0 40px;
+
+    .popup-title {
+      font-size: 38px; // 极大标题
+      font-weight: $font-weight-bold;
+      color: $text-primary;
+    }
+
+    .popup-close {
+      font-size: 40px;
+      color: $text-light;
+      padding: 10px;
+    }
+  }
+}
+
+/* 2. 筛选组标题（如：价格预算） */
+.filter-group {
+  margin-bottom: 50px;
+
+  .group-title {
+    display: block;
+    font-size: 32px; // 放大组标题
+    font-weight: $font-weight-semibold;
+    color: $text-primary;
+    margin-bottom: 30px;
+  }
+}
+
+/* 3. 选项网格与具体选项文字（重点修改处） */
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); // 一行两个，防止字大挤不下
+  gap: 20px;
+
+  .option-item {
+    height: 100px; // 增加高度
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $bg-light;
+    border-radius: $radius-md;
+    
+    // 这里是你要的字体放大
+    font-size: 30px !important; 
+    color: $text-secondary;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+
+    &.active {
+      background-color: rgba(59, 130, 246, 0.1); // 浅蓝色背景
+      color: $primary-color;
+      border-color: $primary-color;
+      font-weight: $font-weight-bold;
+    }
+  }
+}
+
+/* 4. 底部按钮区域 */
+.popup-footer {
+  display: flex;
+  gap: 20px;
+  padding: 40px 0 env(safe-area-inset-bottom);
+
+  .reset-btn, .confirm-btn {
+    flex: 1;
+    height: 110px; // 按钮增高
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-lg;
+    font-size: 34px !important; // 按钮字体放大
+    font-weight: $font-weight-bold;
+  }
+
+  .reset-btn {
+    background-color: $bg-light;
+    color: $text-secondary;
+    border: none;
+  }
+
+  .confirm-btn {
+    background: $primary-gradient;
+    color: #fff;
+    border: none;
+  }
 }

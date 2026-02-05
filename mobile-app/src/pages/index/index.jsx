@@ -20,7 +20,7 @@ import Taro,{
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import './index.scss'
-import { Calendar } from '@nutui/nutui-react-taro';
+import { Calendar,Popup } from '@nutui/nutui-react-taro';
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
@@ -33,6 +33,21 @@ const QUICK_TAGS = [
   { id: 4, icon: '🎨', label: '设计精品', type: 'design' },
   { id: 5, icon: '🏊', label: '无边泳池', type: 'pool' },
   { id: 6, icon: '🍽️', label: '米其林餐厅', type: 'restaurant' }
+]
+
+const PRICE_OPTIONS = [
+  { label: '不限', value: 'all' },
+  { label: '¥0-150', value: '0-150' },
+  { label: '¥150-300', value: '150-300' },
+  { label: '¥300-600', value: '300-600' },
+  { label: '¥600+', value: '600-up' }
+]
+const STAR_OPTIONS = [
+  { label: '不限', value: 'all' },
+  { label: '二星及以下/经济型', value: '2' },
+  { label: '三星/舒适', value: '3' },
+  { label: '四星/高档', value: '4' },
+  { label: '五星/豪华', value: '5' }
 ]
 
 // 最近浏览数据
@@ -105,6 +120,23 @@ export default function Index() {
   const [currentCity, setCurrentCity] = useState('上海市')
   const [loading, setLoading] = useState(false)
   const [isCalendarVisible, setIsCalendarVisible] = useState(false)
+
+  
+  // 2. 增加状态管理
+  const [filterParams, setFilterParams] = useState({
+    price: PRICE_OPTIONS[0],
+    star: STAR_OPTIONS[0]
+  })
+  const [isFilterVisible, setIsFilterVisible] = useState(false)
+  // 临时状态，用于弹窗内选择，点击确定后再同步到 filterParams
+  const [tempFilter, setTempFilter] = useState({ ...filterParams })
+
+  // 3. 处理筛选确认
+  const handleFilterConfirm = () => {
+    setFilterParams({ ...tempFilter })
+    setIsFilterVisible(false)
+  }
+
 
   // 页面生命周期
   useLoad(() => {
@@ -481,6 +513,26 @@ export default function Index() {
                 </Button>
             </View>
           </View>
+          
+          {/* 4. 新增：价格/星级筛选行 */}
+            <View 
+              className="search-row filter-row" 
+              onClick={() => {
+                setTempFilter({ ...filterParams })
+                setIsFilterVisible(true)
+              }}
+              hoverClass="row-hover"
+            >
+              <Text className="filter-label">价格/星级</Text>
+              <View className="filter-display">
+                <Text className={`filter-value ${(filterParams.price.value === 'all' && filterParams.star.value === 'all') ? 'placeholder' : ''}`}>
+                  {filterParams.price.value === 'all' && filterParams.star.value === 'all' 
+                    ? '请选择价格/星级' 
+                    : `${filterParams.price.label} · ${filterParams.star.label}`}
+                </Text>
+                <Text className="arrow-icon">›</Text>
+              </View>
+            </View>
 
             {/* 搜索按钮 */}
             <Button 
@@ -587,6 +639,59 @@ export default function Index() {
         {/* 底部留白 */}
         <View className="bottom-spacing"></View>
       </ScrollView>
+
+      {/* 5. 新增：价格星级筛选弹窗 */}
+      <Popup
+        visible={isFilterVisible}
+        position="bottom"
+        round
+        onClose={() => setIsFilterVisible(false)}
+      >
+        <View className="filter-popup-content">
+          <View className="popup-header">
+            <Text className="popup-title">价格/星级筛选</Text>
+            <Text className="popup-close" onClick={() => setIsFilterVisible(false)}>✕</Text>
+          </View>
+          
+          <ScrollView className="popup-body" scrollY>
+            <View className="filter-group">
+              <Text className="group-title">价格预算</Text>
+              <View className="options-grid">
+                {PRICE_OPTIONS.map(opt => (
+                  <View 
+                    key={opt.value}
+                    className={`option-item ${tempFilter.price.value === opt.value ? 'active' : ''}`}
+                    onClick={() => setTempFilter(p => ({ ...p, price: opt }))}
+                  >
+                    {opt.label}
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className="filter-group">
+              <Text className="group-title">星级标准</Text>
+              <View className="options-grid">
+                {STAR_OPTIONS.map(opt => (
+                  <View 
+                    key={opt.value}
+                    className={`option-item ${tempFilter.star.value === opt.value ? 'active' : ''}`}
+                    onClick={() => setTempFilter(p => ({ ...p, star: opt }))}
+                  >
+                    {opt.label}
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View className="popup-footer">
+            <Button className="reset-btn" onClick={() => setTempFilter({ price: PRICE_OPTIONS[0], star: STAR_OPTIONS[0] })}>重置</Button>
+            <Button className="confirm-btn" onClick={handleFilterConfirm}>完成</Button>
+          </View>
+        </View>
+      </Popup>
+
 
      {isCalendarVisible && (
       <Calendar
