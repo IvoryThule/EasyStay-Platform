@@ -233,23 +233,51 @@
     ```
 *   **Response**: 200 OK
 
-## 3. 文件上传
+## 3. 系统服务
 
-### 3.1 上传图片
+#### 3.1 图片上传 (需要 Login)
 *   **URL**: `/upload`
 *   **Method**: `POST`
-*   **Headers**: `Authorization: Bearer <token>`
-*   **Body**: `multipart/form-data`
-    *   `image`: `<File Object>`
+*   **Headers**: `Content-Type: multipart/form-data`, `Authorization: Bearer ...`
+*   **Form Data**: `file` (Binary Image)
 *   **Response**:
     ```json
     {
       "code": 200,
       "msg": "Upload successful",
       "data": {
-        "url": "/uploads/550e8400-e29b-41d4-a716-446655440000.jpg", // 拿着这个 URL 去填 hotel.cover_image
-        "filename": "...",
-        "mimetype": "image/jpeg"
+        "url": "/uploads/17000000-123.jpg",
+        "filename": "17000000-123.jpg"
+      }
+    }
+    ```
+
+#### 3.2 IP 定位
+*   **URL**: `/system/location`
+*   **Method**: `GET`
+*   **Query**: `ip` (可选，测试用)
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "province": "上海市",
+        "city": "上海市",
+        "adcode": "310000"
+      }
+    }
+    ```
+
+#### 3.3 AI 对话 (需 Login)
+*   **URL**: `/ai/chat`
+*   **Method**: `POST`
+*   **Body**: `{"prompt": "帮我写一段关于外滩酒店的介绍"}`
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "content": "外滩酒店坐落于黄浦江畔..." // AI 生成的文本
       }
     }
     ```

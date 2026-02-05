@@ -10,10 +10,15 @@ app.use(express.json());
 // 路由
 const authRoutes = require('./src/routes/authRoutes');
 const hotelRoutes = require('./src/routes/hotelRoutes');
-const uploadRoutes = require('./src/routes/uploadRoutes'); // Inserted
+const uploadRoutes = require('./src/routes/uploadRoutes');
+const systemRoutes = require('./src/routes/systemRoutes');
+const aiRoutes = require('./src/routes/aiRoutes');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/hotel', hotelRoutes);
-app.use('/api/upload', uploadRoutes); // Inserted
+app.use('/api/upload', uploadRoutes); // 图片上传
+app.use('/api/system', systemRoutes); // IP定位
+app.use('/api/ai', aiRoutes);         // GLM AI服务
 
 app.get('/', (req, res) => {
     res.send('EasyStay Backend is Running on Port 3000!');
