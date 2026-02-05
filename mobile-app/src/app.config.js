@@ -20,17 +20,17 @@
       borderStyle: 'black',
       
       list: [{
-        pagePath: 'pages/index/index',
-        text: '首页查询'
-      }, {
-        pagePath: 'pages/list/index',
-        text: '目的地'
-      }, {
-        pagePath: 'pages/detail/index',
-        text: '订单'
-      },{
-        pagePath: 'pages/user/index',
-        text: '我的'
-      }]
+      pagePath: 'pages/index/index',
+      text: '首页'
+    }, {
+      pagePath: 'pages/list/index',
+      text: '目的地'
+    }, {
+      pagePath: 'pages/login/index',
+      text: '订单'
+    },{
+      pagePath: 'pages/user/index',
+      text: '我的'
+    }]
   }
 })
