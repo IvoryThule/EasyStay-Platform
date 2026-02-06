@@ -2,7 +2,7 @@
 // 待实现。
 import React from 'react';
 import { View, Image, Text } from '@tarojs/components';
-import './index.scss'; // 假设你已经有了样式文件，如果没有请参考之前的回答
+import './index.scss'; 
 
 const HotelCard = ({ data, onClick }) => {
   if (!data) return null;

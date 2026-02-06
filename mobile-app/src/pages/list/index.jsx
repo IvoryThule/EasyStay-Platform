@@ -5,6 +5,7 @@ import Taro, { getCurrentInstance, navigateBack, useLoad, useDidShow,switchTab }
 import { Popup } from '@nutui/nutui-react-taro'
 import HotelCard from '../../components/HotelCard' // 引入卡片组件
 import './index.scss'
+import { IoIosSearch } from "react-icons/io";
 
 // 静态筛选项配置（与首页保持一致，实际可提取为常量文件）
 const PRICE_OPTIONS = [
@@ -244,6 +245,45 @@ const formatDate = (dateStr, format = 'MM-DD') => {
   return dateStr;
 };
 
+// 1. 在组件内部定义标签数据（或放在外部常量）
+const QUICK_FILTERS = ['双床房', '含早餐', '免费取消', '亲子优选', '智能家居', '江景房', '地铁周边', '五星级', '泳池'];
+
+// 2. 在 Index 或 List 组件内
+const [selectedTags, setSelectedTags] = useState([]); // 选中的标签数组
+
+const toggleTag = (tag) => {
+  // 实现多选逻辑：如果已选则移除，未选则加入
+  setSelectedTags(prev => 
+    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+  );
+  // 这里后续可以调用 API 重新加载数据
+};
+
+// 1. 定义状态
+const [activeTab, setActiveTab] = useState(''); // 当前点击的分类：'welcome' | 'distance' | 'price'
+const [sortType, setSortType] = useState('welcome'); // 实际生效的排序值
+
+// 2. 排序选项数据
+const welcomeOptions = [
+  { label: '欢迎度排序', value: 'welcome' },
+  { label: '好评优先', value: 'rating' },
+  { label: '低价优先', value: 'price_low' }
+];
+
+// 3. 点击处理
+const handleTabClick = (tabName) => {
+  if (activeTab === tabName) {
+    setActiveTab(''); // 再次点击关闭
+  } else {
+    setActiveTab(tabName);
+  }
+};
+
+const handleSelectSort = (val) => {
+  setSortType(val);
+  setActiveTab(''); // 关闭弹窗
+  // 这里执行你的查询逻辑：queryParams.update({ sort: val })
+};
 
   return (
     <View className="list-page">
@@ -309,74 +349,98 @@ const formatDate = (dateStr, format = 'MM-DD') => {
         scrollWithAnimation
       >
         <View className="tags-container">
-          <View className="filter-tag">
-            <Text className="tag-text">双床房</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">含早餐</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">免费取消</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">亲子优选</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">智能家居</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">江景房</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">地铁周边</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">五星级</Text>
-          </View>
-          <View className="filter-tag">
-            <Text className="tag-text">泳池</Text>
-          </View>
+          {QUICK_FILTERS.map(tag => (
+            <View 
+              key={tag}
+              // 关键点1：动态类名切换选中效果
+              className={`filter-tag ${selectedTags.includes(tag) ? 'active' : ''}`}
+              // 关键点2：指定点击态样式类
+              hoverClass="filter-tag--hover"
+              // 关键点3：点击反馈时长
+              hoverStayTime={80}
+              onClick={() => toggleTag(tag)}
+            >
+              <Text className="tag-text">{tag}</Text>
+            </View>
+          ))}
         </View>
       </ScrollView>
 
-      {/* 排序栏 - 字体继续放大 */}
-      <View className="sort-bar">
-        <View className="sort-item active">
-          <Text className="sort-text">欢迎度排序</Text>
-          <View className="sort-icon">▼</View>
-        </View>
-        <View className="sort-item">
-          <Text className="sort-text">位置距离</Text>
-          <View className="sort-icon">▼</View>
-        </View>
-        <View 
-          className={`sort-item ${queryParams.priceType !== 'all' || queryParams.starType !== 'all' ? 'active' : ''}`}
-          onClick={() => setShowFilterPopup(true)}
-        >
-          <Text className="sort-text">价格/星级</Text>
-          <View className="sort-icon">▼</View>
-          {(queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
-            <View className="filter-indicator"></View>
-          )}
-        </View>
-        <View className="sort-item">
-          <Text className="sort-text">筛选</Text>
-          <View className="sort-icon">≡</View>
-        </View>
+      {/* 排序栏 */}
+    <View className="sort-bar">
+      {/* 欢迎度排序 */}
+      <View 
+        className={`sort-item ${sortType === 'welcome' || activeTab === 'welcome' ? 'active' : ''}`}
+        hoverClass="sort-item--hover"
+        onClick={() => handleTabClick('welcome')}
+      >
+        <Text className="sort-text">
+          {welcomeOptions.find(o => o.value === sortType)?.label || '欢迎度'}
+        </Text>
+        <View className="sort-icon">▼</View>
       </View>
-      
-      {/* 当前筛选条件摘要 */}
-      {(queryParams.keyword || queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
-        <View className="filter-summary">
-          <Text className="summary-text">
-            当前筛选:
-            {queryParams.keyword && ` "${queryParams.keyword}"`}
-            {queryParams.priceType !== 'all' && ` 价格:${getPriceLabel(queryParams.priceType)}`}
-            {queryParams.starType !== 'all' && ` 星级:${getStarLabel(queryParams.starType)}`}
-          </Text>
-        </View>
-      )}
+
+      {/* 位置距离 */}
+      <View 
+        className={`sort-item ${activeTab === 'distance' ? 'active' : ''}`}
+        hoverClass="sort-item--hover"
+        onClick={() => handleTabClick('distance')}
+      >
+        <Text className="sort-text">位置距离</Text>
+        <View className="sort-icon">▼</View>
+      </View>
+
+      {/* 价格/星级 - 保持你原有的逻辑 */}
+      <View 
+        className={`sort-item ${queryParams.priceType !== 'all' || queryParams.starType !== 'all' ? 'active' : ''}`}
+        hoverClass="sort-item--hover"
+        onClick={() => setShowFilterPopup(true)}
+      >
+        <Text className="sort-text">价格/星级</Text>
+        <View className="sort-icon">▼</View>
+        {(queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
+          <View className="filter-indicator"></View>
+        )}
+      </View>
+
+      <View className="sort-item" hoverClass="sort-item--hover">
+        <Text className="sort-text">筛选</Text>
+        <View className="sort-icon">≡</View>
+      </View>
     </View>
+
+    {/* 下拉弹窗容器 - 针对“欢迎度排序” */}
+    <Popup
+      visible={activeTab === 'welcome'}
+      position="top"
+      onClose={() => setActiveTab('')}
+      style={{ top: '100px' }} // 根据你 header 的高度调整偏移
+    >
+      <View className="sort-dropdown">
+        {welcomeOptions.map(opt => (
+          <View 
+            key={opt.value} 
+            className={`dropdown-item ${sortType === opt.value ? 'active' : ''}`}
+            onClick={() => handleSelectSort(opt.value)}
+          >
+            {opt.label}
+          </View>
+        ))}
+      </View>
+    </Popup>
+    </View>
+
+    {/* 当前筛选条件摘要 - 保持不变 */}
+    {(queryParams.keyword || queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
+      <View className="filter-summary">
+        <Text className="summary-text">
+          当前筛选:
+          {queryParams.keyword && ` "${queryParams.keyword}"`}
+          {queryParams.priceType !== 'all' && ` 价格:${getPriceLabel(queryParams.priceType)}`}
+          {queryParams.starType !== 'all' && ` 星级:${getStarLabel(queryParams.starType)}`}
+        </Text>
+      </View>
+    )}
 
       {/* 2. 列表滚动区域 */}
       <ScrollView

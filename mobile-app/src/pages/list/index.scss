@@ -13,6 +13,8 @@ $text-secondary: #6b7280;
 .list-page {
   height: 100vh;
   background: #fff;
+  display: flex;        // 新增：变为 Flex 容器
+  flex-direction: column; // 新增：垂直排列
   overflow: hidden;
   position: relative;
 }
@@ -73,7 +75,7 @@ $text-secondary: #6b7280;
         // 城市部分 - 直接加粗显示城市名
         &.city-section {
           .city-name {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700; // 加粗
             color: #2563eb; // 蓝色
             line-height: 1;
@@ -144,7 +146,7 @@ $text-secondary: #6b7280;
           min-width: 0; // 防止内容溢出
           
           .keyword-text {
-            font-size: 11px;
+            font-size: 20px;
             color: #9ca3af;
             line-height: 1.2;
             white-space: nowrap;
@@ -164,8 +166,8 @@ $text-secondary: #6b7280;
         margin-left: 8px;
         
         .search-icon {
-          font-size: 16px;
-          color: #9ca3af;
+          font-size: 18px;
+          color: #555a61;
           line-height: 1;
         }
       }
@@ -174,7 +176,7 @@ $text-secondary: #6b7280;
 }
 
 
-// 快速筛选标签 - 放大字体
+// 快速筛选标签
 .quick-filter-tags {
   padding: 0 16px 12px;
   background: #fff;
@@ -182,28 +184,56 @@ $text-secondary: #6b7280;
   .tags-container {
     display: flex;
     gap: 8px;
-    padding: 4px 0;
+    padding: 8px 0; // 增加上下内边距，给放大后的字体留空间
+    overflow-x: auto; // 确保可以横向滚动
     
     .filter-tag {
-      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px; // 适当增加 padding
       background: #f3f4f6;
-      border-radius: 20px;
+      border-radius: 40px; // 随高度变大增加圆角
       border: 1px solid transparent;
       flex-shrink: 0;
-      
-      &.active {
-        background: $primary-light;
-        border-color: $primary;
+      min-height: 40px; // 增加最小高度确保容器不塌陷
+      // 增加过渡动画，让缩放和变色更平滑
+      transition: all 0.1s ease-out; 
+
+      // --- 【新增：点击瞬间的动效】 ---
+      &--hover {
+        background-color: #e5e7eb !important; // 背景变深
+        transform: scale(0.94); // 按钮轻微缩小，产生按压感
+        opacity: 0.8; // 轻微透明
       }
       
+      &.active {
+        background: rgba($primary, 0.1); // 假设 $primary 已定义
+        border-color: $primary;
+      }
+
+      // 选中状态下的点击动效
+        &--hover {
+          background-color: rgba($primary, 0.2) !important;
+        }
+        .tag-text {
+          color: $primary;
+          font-weight: 600;
+        }
+      
+      // 使用更具体的选择器确保权重
       .tag-text {
-        font-size: 14px; // 字体放大
+        display: inline-block;
+        font-size: 22px !important; // !important 解决权重
         color: #374151;
         font-weight: 500;
+        line-height: 1.4; // 确保行高正常
         
+        // 选中状态下的文字
         .active & {
           color: $primary;
           font-weight: 600;
+          font-size: 32rpx !important; 
         }
       }
     }
@@ -215,65 +245,74 @@ $text-secondary: #6b7280;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 16px 0;
+  padding: 12px 0;
   background: #fff;
   border-bottom: 1px solid $border-color;
+  position: sticky; // 吸顶效果（可选）
+  top: 0;
+  z-index: 100;
   
   .sort-item {
     display: flex;
     align-items: center;
-    padding: 10px 12px;
+    padding: 8px 10px;
     position: relative;
     border-radius: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease;
+
+    // 原生点击反馈类名
+    &--hover {
+      background: #f5f5f5 !important;
+      transform: scale(0.95); // 点击轻微缩小
+    }
     
     // 激活状态
     &.active {
-      background: $primary-light;
-      
       .sort-text {
         color: $primary;
         font-weight: 700;
       }
-      
       .sort-icon {
         color: $primary;
+        transform: rotate(180deg); // 激活时图标反转
       }
     }
     
-    // 点击效果
-    &:active {
-      background: #f3f4f6;
-    }
-    
-    // 排序文本 - 继续放大
     .sort-text {
-      font-size: 18px; // 从16px继续放大到18px
-      color: $text-primary;
+      font-size: 25px !important; // 放大至 34rpx (约 17px)
+      color: #333;
       font-weight: 600;
-      margin-right: 6px;
+      margin-right: 4px;
       line-height: 1.2;
-      white-space: nowrap;
     }
     
-    // 排序图标
     .sort-icon {
-      font-size: 14px;
-      color: $text-secondary;
-      line-height: 1;
+      font-size: 24rpx;
+      color: #999;
+      transition: transform 0.2s ease;
     }
     
-    // 筛选指示器（当有筛选条件时显示）
     .filter-indicator {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 6px;
-      height: 6px;
+      top: 4px;
+      right: 2px;
+      width: 12rpx;
+      height: 12rpx;
       background: $primary;
-      border-radius: 3px;
-      animation: pulse 2s infinite;
+      border-radius: 50%;
     }
+  }
+}
+
+// 下拉弹窗样式简述
+.sort-dropdown {
+  background: #fff;
+  padding: 20px;
+  .dropdown-item {
+    padding: 30rpx 0;
+    font-size: 32rpx;
+    border-bottom: 1rpx solid #f2f2f2;
+    &.active { color: $primary; font-weight: bold; }
   }
 }
 
@@ -411,7 +450,7 @@ $text-secondary: #6b7280;
         border: 1px solid $primary;
         
         &:active {
-          background: darken($primary, 10%);
+          background: scale-color($primary, $lightness: -10%);
         }
       }
     }
@@ -455,7 +494,12 @@ $text-secondary: #6b7280;
 }
 
 .quick-filter-tags,
-.list-scroll,
+.list-scroll {
+  flex: 1;              // 新增：自动填满剩下高度
+  height: 0;            // 新增：触发 BFC 计算
+  overflow-y: scroll;
+  @extend .hide-scrollbar;
+}
 .popup-body {
   @extend .hide-scrollbar;
 }
