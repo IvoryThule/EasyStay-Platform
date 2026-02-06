@@ -1,4 +1,4 @@
-﻿// [入口] 启动文件，配置中间件、静态资源、错误处理
+﻿﻿// [入口] 启动文件，配置中间件、静态资源、错误处理
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
