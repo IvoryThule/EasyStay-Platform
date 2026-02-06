@@ -1,2 +1,790 @@
 ﻿/* [页面样式] 列表页 */
 /* 待实现。 */
+// pages/list/index.scss
+$primary: #2563eb;
+$primary-light: rgba(37, 99, 235, 0.1);
+$success: #10b981;
+$warning: #f59e0b;
+$bg-gray: #f5f6fa;
+$border-color: #e5e7eb;
+$text-primary: #111827;
+$text-secondary: #6b7280;
+
+.list-page {
+  height: 100vh;
+  background: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+// ==================== 顶部sticky区域 ====================
+.sticky-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  z-index: 1000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+// ==================== 1. 搜索胶囊区域 ====================
+// 整体设计参考HTML代码
+.search-bar {
+  padding: 12px 16px 10px;
+  background: #fff;
+  
+  .search-capsule-container {
+    background: rgba(243, 244, 246, 0.8);
+    border-radius: 9999px;
+    padding: 8px 12px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(229, 231, 235, 0.5);
+    
+    .search-capsule {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 40px;
+      
+      // 返回按钮
+      .back-btn {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 8px;
+        
+        .back-icon {
+          font-size: 24px;
+          color: #6b7280;
+          font-weight: bold;
+          line-height: 1;
+        }
+      }
+      
+      // 胶囊内的每个部分
+      .capsule-section {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        
+        // 城市部分 - 直接加粗显示城市名
+        &.city-section {
+          .city-name {
+            font-size: 22px;
+            font-weight: 700; // 加粗
+            color: #2563eb; // 蓝色
+            line-height: 1;
+            white-space: nowrap;
+          }
+          
+          .section-divider {
+            width: 1px;
+            height: 22px;
+            background: #d1d5db;
+            margin: 0 12px;
+          }
+        }
+        
+        // 日期部分 - 上下结构
+        &.date-section {
+        // 核心修改1：容器改为垂直布局
+            display: flex;
+            flex-direction: row;
+            align-items: center; 
+            gap: 0; 
+        
+        .date-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px; // 住/离之间的间距，可根据需要调整
+        }
+        
+        .date-container {
+            display: flex;
+            // 核心修改2：单行改为横向排列（住/离 与 日期并排）
+            flex-direction: row;
+            align-items: center; // 垂直居中对齐
+            // 移除原有：margin-right: 8px;（上下布局不需要横向间距）
+            margin: 0; // 重置外边距
+    
+        .date-label {
+            // 保留你原有样式，仅新增横向间距
+            font-size: 16px;
+            color: #6b7280;
+            font-weight: 500;
+            line-height: 1.2;
+            // 移除原有：margin-bottom: 1px;（横向布局不需要上下间距）
+            margin-right: 4px; // 新增：标签与日期之间的横向间距
+        }
+    
+        .date-value {
+        // 完全保留你原有样式
+            font-size: 16px;
+            color: #6b7280;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+    }
+  
+        .right-vertical-line {
+            width: 1px;
+            height: 22px;
+            background: #d1d5db;
+            margin: 0 12px; // 你指定的左右12px间距
+        }
+      }
+        
+        // 关键词部分
+        &.keyword-section {
+          flex: 1;
+          min-width: 0; // 防止内容溢出
+          
+          .keyword-text {
+            font-size: 11px;
+            color: #9ca3af;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 400;
+            
+            &:empty:before {
+              content: '位置/品牌/酒店';
+            }
+          }
+        }
+      }
+      
+      // 搜索图标部分
+      .search-icon-section {
+        margin-left: 8px;
+        
+        .search-icon {
+          font-size: 16px;
+          color: #9ca3af;
+          line-height: 1;
+        }
+      }
+    }
+  }
+}
+
+
+// 快速筛选标签 - 放大字体
+.quick-filter-tags {
+  padding: 0 16px 12px;
+  background: #fff;
+  
+  .tags-container {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+    
+    .filter-tag {
+      padding: 8px 16px;
+      background: #f3f4f6;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      flex-shrink: 0;
+      
+      &.active {
+        background: $primary-light;
+        border-color: $primary;
+      }
+      
+      .tag-text {
+        font-size: 14px; // 字体放大
+        color: #374151;
+        font-weight: 500;
+        
+        .active & {
+          color: $primary;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+// ==================== 3. 排序栏 ====================
+.sort-bar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 16px 0;
+  background: #fff;
+  border-bottom: 1px solid $border-color;
+  
+  .sort-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    position: relative;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    
+    // 激活状态
+    &.active {
+      background: $primary-light;
+      
+      .sort-text {
+        color: $primary;
+        font-weight: 700;
+      }
+      
+      .sort-icon {
+        color: $primary;
+      }
+    }
+    
+    // 点击效果
+    &:active {
+      background: #f3f4f6;
+    }
+    
+    // 排序文本 - 继续放大
+    .sort-text {
+      font-size: 18px; // 从16px继续放大到18px
+      color: $text-primary;
+      font-weight: 600;
+      margin-right: 6px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    
+    // 排序图标
+    .sort-icon {
+      font-size: 14px;
+      color: $text-secondary;
+      line-height: 1;
+    }
+    
+    // 筛选指示器（当有筛选条件时显示）
+    .filter-indicator {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 6px;
+      height: 6px;
+      background: $primary;
+      border-radius: 3px;
+      animation: pulse 2s infinite;
+    }
+  }
+}
+
+
+// ==================== 地图按钮 ====================
+.map-button {
+  position: absolute;
+  right: 20px;
+  bottom: 100px;
+  width: 56px;
+  height: 56px;
+  background: #fff;
+  border-radius: 28px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  
+  .map-icon {
+    font-size: 20px;
+    color: $primary;
+    margin-bottom: 2px;
+  }
+  
+  .map-text {
+    font-size: 10px;
+    color: $primary;
+    font-weight: bold;
+  }
+}
+
+// ==================== 筛选弹窗 ====================
+.filter-popup {
+  background: #fff;
+  height: 60vh;
+  display: flex;
+  flex-direction: column;
+
+  .popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid $border-color;
+    
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #111827;
+    }
+    
+    .close {
+      font-size: 20px;
+      color: #6b7280;
+      padding: 4px;
+    }
+  }
+
+  .popup-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+
+    .section {
+      margin-bottom: 28px;
+      
+      .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #111827;
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .tags-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        .tag {
+          padding: 12px 20px;
+          background: #f3f4f6;
+          border-radius: 20px;
+          font-size: 14px;
+          color: #374151;
+          border: 1px solid transparent;
+          transition: all 0.2s ease;
+          min-width: 90px;
+          text-align: center;
+          font-weight: 500;
+
+          &.active {
+            background: $primary-light;
+            color: $primary;
+            font-weight: 600;
+            border-color: $primary;
+          }
+        }
+      }
+    }
+  }
+
+  .popup-footer {
+    display: flex;
+    padding: 20px;
+    border-top: 1px solid $border-color;
+    gap: 12px;
+
+    .btn {
+      flex: 1;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 24px;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      
+      &.reset {
+        background: #fff;
+        border: 1px solid #d1d5db;
+        color: #374151;
+        
+        &:active {
+          background: #f9fafb;
+        }
+      }
+
+      &.confirm {
+        background: $primary;
+        color: #fff;
+        border: 1px solid $primary;
+        
+        &:active {
+          background: darken($primary, 10%);
+        }
+      }
+    }
+  }
+}
+
+// ==================== 4. 筛选条件摘要 ====================
+.filter-summary {
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  
+  .summary-text {
+    font-size: 14px;
+    color: $text-secondary;
+    line-height: 1.4;
+    
+    &:empty:before {
+      content: '暂无筛选条件';
+      color: #9ca3af;
+      font-style: italic;
+    }
+  }
+}
+
+
+// ==================== 动画 ====================
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// ==================== 滚动优化 ====================
+.hide-scrollbar {
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.quick-filter-tags,
+.list-scroll,
+.popup-body {
+  @extend .hide-scrollbar;
+}
+
+// ==================== 响应式调整 ====================
+@media (max-width: 320px) {
+  .search-capsule {
+    .search-main {
+      .date-section {
+        .date-num {
+          font-size: 18px !important;
+        }
+        .date-month {
+          font-size: 12px !important;
+        }
+      }
+    }
+  }
+  
+  .sort-bar .sort-item .sort-text {
+    font-size: 14px !important;
+  }
+  
+  .hotel-card {
+    .hotel-image-container {
+      width: 120px !important;
+      height: 140px !important;
+    }
+  }
+}// ==================== 2. 快速筛选标签行 ====================
+.quick-filter-tags {
+  padding: 10px 16px 8px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  width: 100%;
+  
+  .tags-container {
+    display: flex;
+    gap: 10px;
+    padding: 4px 0;
+    width: max-content; // 允许横向滚动
+    
+    .filter-tag {
+      padding: 6px 16px;
+      background: #f3f4f6;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 32px; // 固定高度，刚好适配字体
+      min-width: fit-content;
+      transition: all 0.2s ease;
+      
+      &:active {
+        background: #e5e7eb;
+        transform: scale(0.98);
+      }
+      
+      .tag-text {
+        font-size: 16px; // 字体显著放大
+        color: #374151;
+        font-weight: 500;
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+      
+      // 激活状态
+      &.active {
+        background: $primary-light;
+        border-color: $primary;
+        
+        .tag-text {
+          color: $primary;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+}
+
+// ==================== 3. 排序栏 ====================
+.sort-bar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 16px 0;
+  background: #fff;
+  border-bottom: 1px solid $border-color;
+  
+  .sort-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    position: relative;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    
+    // 激活状态
+    &.active {
+      background: $primary-light;
+      
+      .sort-text {
+        color: $primary;
+        font-weight: 700;
+      }
+      
+      .sort-icon {
+        color: $primary;
+      }
+    }
+    
+    // 点击效果
+    &:active {
+      background: #f3f4f6;
+    }
+    
+    // 排序文本 - 继续放大
+    .sort-text {
+      font-size: 18px; // 从16px继续放大到18px
+      color: $text-primary;
+      font-weight: 600;
+      margin-right: 6px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    
+    // 排序图标
+    .sort-icon {
+      font-size: 14px;
+      color: $text-secondary;
+      line-height: 1;
+    }
+    
+    // 筛选指示器（当有筛选条件时显示）
+    .filter-indicator {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 6px;
+      height: 6px;
+      background: $primary;
+      border-radius: 3px;
+      animation: pulse 2s infinite;
+    }
+  }
+}
+
+// ==================== 4. 筛选条件摘要 ====================
+.filter-summary {
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  
+  .summary-text {
+    font-size: 14px;
+    color: $text-secondary;
+    line-height: 1.4;
+    
+    &:empty:before {
+      content: '暂无筛选条件';
+      color: #9ca3af;
+      font-style: italic;
+    }
+  }
+}
+
+// ==================== 动画效果 ====================
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-bar,
+.quick-filter-tags,
+.sort-bar,
+.filter-summary {
+  animation: fadeIn 0.3s ease;
+}
+
+// ==================== 滚动优化 ====================
+.quick-filter-tags {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+// ==================== 响应式调整 ====================
+// 针对小屏幕的调整
+@media (max-width: 320px) {
+  .search-bar {
+    .search-capsule-container {
+      .search-capsule {
+        // 城市部分
+        .city-section {
+          .city-name {
+            font-size: 12px !important;
+          }
+        }
+        
+        // 日期部分
+        .date-section {
+          .date-container {
+            .date-label,
+            .date-value {
+              font-size: 9px !important;
+            }
+          }
+        }
+        
+        // 关键词部分
+        .keyword-section {
+          .keyword-text {
+            font-size: 10px !important;
+          }
+        }
+      }
+    }
+  }
+  
+  .quick-filter-tags {
+    .tags-container {
+      .filter-tag {
+        padding: 5px 12px;
+        height: 28px;
+        
+        .tag-text {
+          font-size: 14px !important;
+        }
+      }
+    }
+  }
+  
+  .sort-bar {
+    .sort-item {
+      padding: 8px 10px;
+      
+      .sort-text {
+        font-size: 16px !important;
+      }
+      
+      .sort-icon {
+        font-size: 12px !important;
+      }
+    }
+  }
+}
+
+// 针对大屏幕的优化
+@media (min-width: 400px) {
+  .search-bar {
+    .search-capsule-container {
+      .search-capsule {
+        // 城市部分
+        .city-section {
+          .city-name {
+            font-size: 16px !important;
+          }
+        }
+        
+        // 日期部分
+        .date-section {
+          .date-container {
+            .date-label,
+            .date-value {
+              font-size: 12px !important;
+            }
+          }
+        }
+        
+        // 关键词部分
+        .keyword-section {
+          .keyword-text {
+            font-size: 13px !important;
+          }
+        }
+      }
+    }
+  }
+  
+  .quick-filter-tags {
+    .tags-container {
+      .filter-tag {
+        height: 36px;
+        
+        .tag-text {
+          font-size: 18px !important;
+        }
+      }
+    }
+  }
+  
+  .sort-bar {
+    .sort-item {
+      .sort-text {
+        font-size: 20px !important;
+      }
+      
+      .sort-icon {
+        font-size: 16px !important;
+      }
+    }
+  }
+}
