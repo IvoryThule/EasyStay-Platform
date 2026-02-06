@@ -12,7 +12,7 @@ User.hasMany(Hotel, { foreignKey: 'merchant_id' });
 Hotel.belongsTo(User, { foreignKey: 'merchant_id' });
 
 // 2. 酒店 -> 房型
-Hotel.hasMany(RoomType, { foreignKey: 'hotel_id' });
+Hotel.hasMany(RoomType, { foreignKey: 'hotel_id', as: 'roomTypes' });
 RoomType.belongsTo(Hotel, { foreignKey: 'hotel_id' });
 
 // 3. 订单关联

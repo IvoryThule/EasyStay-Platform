@@ -11,7 +11,7 @@ export default function Page() {
   return (
     <View className='index'>
       <Text>我的内容</Text>
-      <CustomTabBar currentIndex={4} />
+      {process.env.TARO_ENV === 'h5' && <CustomTabBar />}
     </View>
   )
 }

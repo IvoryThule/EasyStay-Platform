@@ -21,6 +21,8 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import './index.scss'
 import { Calendar,Popup } from '@nutui/nutui-react-taro';
+import CustomTabBar from '../../custom-tab-bar';
+
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
@@ -742,6 +744,7 @@ export default function Index() {
           </View>
         </View>
       )}
+      {process.env.TARO_ENV === 'h5' && <CustomTabBar />}
     </View>
   )
 }

@@ -1,60 +1,60 @@
 import React, { useState, useEffect } from 'react'
 import Taro from '@tarojs/taro'
 import { CoverView, CoverImage } from '@tarojs/components'
+import { Home, Category, Order, User } from '@nutui/icons-react-taro'
+import { RiOpenaiLine } from 'react-icons/ri'
 import './index.scss'
 
 const CustomTabBar = () => {
-  // 1. 使用 useState 管理状态
   const [selected, setSelected] = useState(0)
-  const [color] = useState('#666')
-  const [selectedColor] = useState('#e6c98a')
+  // Standard Theme: Grey Inactive / Blue Active
+  const [color] = useState('#999999') 
+  const [selectedColor] = useState('#2F86F6') 
   
-  const [list] = useState([
+  const list = [
     {
       pagePath: '/pages/index/index',
-      iconPath: '/assets/tabbar/home.png',
-      selectedIconPath: '/assets/tabbar/home-active.png',
-      text: '首页查询'
+      text: '首页',
+      icon: Home
     },
     {
       pagePath: '/pages/list/index',
-      iconPath: '/assets/tabbar/map.png',
-      selectedIconPath: '/assets/tabbar/map-active.png',
-      text: '目的地'
+      text: '目的地',
+      icon: Category
+    },
+    {
+      key: 'ai',
+      text: 'AI助手', 
+      icon: null, 
+      isSpecial: true
     },
     {
       pagePath: '/pages/login/index',
-      iconPath: '/assets/tabbar/order.png',
-      selectedIconPath: '/assets/tabbar/order-active.png',
-      text: '订单'
+      text: '订单',
+      icon: Order
     },
     {
       pagePath: '/pages/user/index',
-      iconPath: '/assets/tabbar/user.png',
-      selectedIconPath: '/assets/tabbar/user-active.png',
-      text: '我的'
+      text: '我的',
+      icon: User
     }
-  ])
+  ]
 
-  // 2. 切换 Tab 逻辑
   const switchTab = (item, index) => {
-    // 微信小程序自定义 TabBar 的规范建议在跳转前更新本地状态
+    if (item.isSpecial) {
+       Taro.navigateTo({ url: '/pages/detail/index' })
+       return;
+    }
     setSelected(index)
     Taro.switchTab({ url: item.pagePath })
   }
 
-  // 3. 跳转到 AI 页面
-  const jumpIntellect = () => {
-    Taro.navigateTo({ url: '/pages/detail/index' })
-  }
-
-  // 4. 使用标准 useEffect 处理初始路由同步（替代生命周期）
   useEffect(() => {
     const pages = Taro.getCurrentPages()
     if (pages.length > 0) {
       const route = pages[pages.length - 1].route
       const currentIndex = list.findIndex(item => 
-        item.pagePath.includes(route)
+        item.pagePath && item.pagePath.includes(route)
       )
       if (currentIndex !== -1) {
         setSelected(currentIndex)
@@ -64,41 +64,55 @@ const CustomTabBar = () => {
 
   return (
     <CoverView className='custom-tab-bar'>
-      <CoverView className='tab-bar-wrap'>
-        {list.map((item, index) => (
-          <CoverView
-            className={`tab-bar-item ${selected === index ? 'active' : ''}`}
-            key={item.text}
-            onClick={() => switchTab(item, index)}
-          >
-            <CoverImage
-              className='tab-bar-icon'
-              src={selected === index ? item.selectedIconPath : item.iconPath}
-            />
+      <CoverView className='tab-bar-container'>
+        {list.map((item, index) => {
+          const isSelected = selected === index
+          const IconComponent = item.icon
+          
+          if (item.isSpecial) {
+             return (
+               <CoverView
+                 className='tab-bar-item special-item'
+                 key={index}
+                 onClick={() => switchTab(item, index)}
+               >
+                 <CoverView className='special-bg'>
+                    <RiOpenaiLine size={32} color="#2F86F6" />
+                 </CoverView>
+                 <CoverView className='tab-bar-text' style={{ color: isSelected ? selectedColor : color }}>
+                    {item.text}
+                 </CoverView>
+               </CoverView>
+             )
+          }
+
+          return (
             <CoverView
-              className='tab-bar-text'
-              style={{ color: selected === index ? selectedColor : color }}
+              className={`tab-bar-item ${isSelected ? 'active' : ''}`}
+              key={index}
+              onClick={() => switchTab(item, index)}
             >
-              {item.text}
+               <CoverView className='icon-box'>
+                  <IconComponent 
+                      className='nut-icon'
+                      color={isSelected ? selectedColor : color} 
+                      width={20}
+                      height={20}
+                  />
+              </CoverView>
+              <CoverView className='tab-bar-text' style={{ color: isSelected ? selectedColor : color }}>
+                {item.text}
+              </CoverView>
             </CoverView>
-          </CoverView>
-        ))}
+          )
+        })}
       </CoverView>
-      
-      {/* AI 悬浮按钮 */}
-      <CoverImage
-        className='ai-float-btn'
-        src='/assets/tabbar/ai.png'
-        onClick={jumpIntellect}
-      />
     </CoverView>
   )
 }
 
-// 5. 组件配置：直接挂载到函数对象上
 CustomTabBar.options = {
-  addGlobalClass: true,
-  styleIsolation: 'apply-shared'
+  addGlobalClass: true
 }
 
 export default CustomTabBar

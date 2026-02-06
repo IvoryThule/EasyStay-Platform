@@ -6,7 +6,7 @@
 
 ## 1. 准备工作
 请确保你的电脑上安装了：
-*   **Node.js** (版本 16 或 18 最好)
+*   **Node.js**
 *   **Git**
 *   **VS Code** (也可以安装 Cursor 或在VSCode使用 Copilot 辅助写代码)
 

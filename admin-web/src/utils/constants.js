@@ -1,6 +1,6 @@
 ﻿// [工具] 常量定义 (如: API_BASE_URL)
 // API 基础配置
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 // 本地存储键名
 export const STORAGE_KEYS = {
