@@ -173,26 +173,46 @@ export default function Index() {
     setIsCalendarVisible(false)
   }
 
-  // 处理搜索
+ // 1. 修改 handleSearch 方法
   const handleSearch = () => {
-    console.log('搜索参数:', searchParams)
-    
-    // 验证搜索条件
+    // 基础验证
     if (!searchParams.keyword.trim() && searchParams.city === '请选择') {
-      Taro.showToast({
-        title: '请选择目的地或输入关键词',
-        icon: 'none',
-        duration: 2000
-      })
+      Taro.showToast({ title: '请选择目的地或输入关键词', icon: 'none' })
       return
     }
 
-    // 跳转到搜索结果页
-    navigateTo({
-      url: `/pages/search-result/index?city=${encodeURIComponent(searchParams.city)}&keyword=${encodeURIComponent(searchParams.keyword)}`
+    // 2. 构造查询参数对象
+    const queryObj = {
+      city: searchParams.city,
+      keyword: searchParams.keyword || '',
+      checkInDate: searchParams.checkInDate, // 实际开发建议传 'YYYY-MM-DD' 格式
+      checkOutDate: searchParams.checkOutDate,
+      days: searchParams.nights,
+      // 传递筛选条件的值 (value)，而不是 label
+      priceType: filterParams.price.value, 
+      starType: filterParams.star.value
+    }
+    console.log('搜索参数:', queryObj)
+    // 将参数存储到全局或缓存中（因为 switchTab 不能直接传参）
+    Taro.setStorageSync('hotelSearchParams', queryObj)
+
+    console.log('跳转到 list 页面，参数:', queryObj)
+
+   // 使用 switchTab 跳转到列表页（tabbar页面）
+    Taro.switchTab({
+      url: '/pages/list/index',
+      success: () => {
+        console.log('跳转到列表页成功')
+      },
+      fail: (err) => {
+        console.error('跳转失败:', err)
+        Taro.showToast({
+          title: '跳转失败，请重试',
+          icon: 'error'
+        })
+      }
     })
   }
-
   // 处理城市选择
   const handleCitySelect = (city) => {
     setCurrentCity(city)
