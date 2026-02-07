@@ -1,0 +1,75 @@
+.custom-tab-bar {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: calc(50rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #ffffff;
+  border-top: 1rpx solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  z-index: 9999;
+  pointer-events: auto;
+}
+.custom-tab-bar .tab-bar-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end; /* Align items to bottom */
+  justify-content: space-around;
+}
+.custom-tab-bar .tab-bar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  position: relative;
+  /* Standard Item Styles */
+}
+.custom-tab-bar .tab-bar-item .icon-box {
+  width: 24rpx;
+  height: 24rpx;
+  margin-bottom: 2rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.custom-tab-bar .tab-bar-item .tab-bar-text {
+  font-size: 10rpx;
+  line-height: 1.2;
+}
+.custom-tab-bar .tab-bar-item {
+  /* Active State handled by inline style usually, but can use class */
+}
+.custom-tab-bar .tab-bar-item.active .tab-bar-text {
+  font-weight: 500;
+}
+.custom-tab-bar .tab-bar-item {
+  /* Special AI Item Styles */
+}
+.custom-tab-bar .tab-bar-item.special-item .special-bg {
+  /* Raised Effect */
+  position: absolute;
+  top: -15rpx; /* Move up */
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 -2rpx 5rpx rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+.custom-tab-bar .tab-bar-item.special-item .special-icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+.custom-tab-bar .tab-bar-item.special-item .tab-bar-text {
+  margin-top: 35rpx; /* Push text down below the raised circle */
+}
