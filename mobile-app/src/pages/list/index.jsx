@@ -47,80 +47,48 @@ export default function HotelList() {
     star: 'all'
   })
   // 2. 页面加载：从缓存获取参数并请求数据
+  // --- 修改点 1: 生命周期调整 ---
+  // 将 loadSearchParams 从 useLoad 移出，放入 useDidShow
   useLoad(() => {
-    console.log('列表页加载')
-    loadSearchParams()
+    console.log('列表页加载（仅在页面销毁后重新进入时触发）')
   })
   // 3. 每次显示页面时也检查参数（可选）
   useDidShow(() => {
-    console.log('列表页显示')
-    // 如果是从首页跳转回来，可能需要重新加载数据
-    const cachedParams = Taro.getStorageSync('hotelSearchParams')
-    if (cachedParams) {
-      console.log('从缓存获取到参数:', cachedParams)
-      // 可以在这里更新参数或重新加载数据
-    }
+    console.log('列表页显示（每次切回或进入该页都会触发）')
+    // 强制每次进入页面时，重新读取最新的缓存
+    loadSearchParams()
   })
 
-   // 加载搜索参数的函数
+  // --- 修改点 2: 完善 loadSearchParams 逻辑 ---
   const loadSearchParams = () => {
-    let initialParams = {
-      city: '上海',
-      checkInDate: '',
-      checkOutDate: '',
-      keyword: '',
-      priceType: 'all',
-      starType: 'all'
-    }
-    
-    // 方式1：优先从缓存获取参数
+    // 1. 立即获取最新缓存
     const cachedParams = Taro.getStorageSync('hotelSearchParams')
+    console.log('【检测缓存同步】:', cachedParams)
+
     if (cachedParams) {
-      console.log('从缓存获取参数:', cachedParams)
-      initialParams = {
-        ...initialParams,
-        ...cachedParams,
-        // 确保所有字段都有值
+      // 2. 构造最新参数对象
+      const newParams = {
         city: cachedParams.city || '上海',
         checkInDate: cachedParams.checkInDate || '',
         checkOutDate: cachedParams.checkOutDate || '',
         keyword: cachedParams.keyword || '',
         priceType: cachedParams.priceType || 'all',
         starType: cachedParams.starType || 'all'
-      }
-      
-      // 可选：清除缓存，避免下次进入时重复使用
-      // Taro.removeStorageSync('hotelSearchParams')
-    } 
-    // 方式2：如果缓存没有，再尝试从路由参数获取（兼容其他跳转方式）
-    else {
-      const routerParams = getCurrentInstance().router?.params || {}
-      console.log('从路由参数获取:', routerParams)
-      
-      if (Object.keys(routerParams).length > 0) {
-        initialParams = {
-          ...initialParams,
-          city: decodeURIComponent(routerParams.city || '上海'),
-          checkInDate: decodeURIComponent(routerParams.checkInDate || ''),
-          checkOutDate: decodeURIComponent(routerParams.checkOutDate || ''),
-          keyword: decodeURIComponent(routerParams.keyword || ''),
-          priceType: routerParams.priceType || 'all',
-          starType: routerParams.starType || 'all'
-        }
-      }
+      };
+
+      // 3. 更新 React 状态 (用于 UI 显示)
+      setQueryParams(newParams);
+      setTempFilter({
+        price: newParams.priceType,
+        star: newParams.starType
+      });
+
+      // 4. 重要：重置列表并使用 newParams 直接请求数据
+      // 不要使用 queryParams，因为 setQueryParams 是异步的，此时 queryParams 还是旧值
+      setPage(1); 
+      setHotelList([]); 
+      fetchHotelData(newParams, 1); 
     }
-    
-    console.log('最终使用的参数:', initialParams)
-    
-    // 更新状态
-    setQueryParams(initialParams)
-    setTempFilter({
-      price: initialParams.priceType,
-      star: initialParams.starType
-    })
-    
-    // 发起首次请求
-    fetchHotelData(initialParams, 1)
   }
   
   // 3. 模拟 API 请求方法
@@ -179,6 +147,7 @@ export default function HotelList() {
     if (!loading && hasMore) {
       const nextPage = page + 1
       setPage(nextPage)
+      // 加载更多时，确保使用的是当前 queryParams 的最新值
       fetchHotelData(queryParams, nextPage)
     }
   }
@@ -232,17 +201,29 @@ export default function HotelList() {
   // 在组件内添加日期格式化函数
 const formatDate = (dateStr, format = 'MM-DD') => {
   if (!dateStr) return '';
-  // 移除中文字符，转换为标准格式
-  const cleanDate = dateStr.replace(/[月日]/g, '-').replace(/-$/, '');
-  const parts = cleanDate.split('-');
-  if (parts.length < 2) return dateStr;
+  
+  // 1. 如果包含中文 "月" 或 "日"，先替换为 "-"
+  let normalized = dateStr.replace('月', '-').replace('日', '').trim();
+  
+  // 2. 切割字符串
+  const parts = normalized.split('-');
+  
+  // 3. 处理不同长度的数组 (考虑到可能传入 2026-02-18 或 02-18)
+  let month = '';
+  let day = '';
+  
+  if (parts.length >= 2) {
+    // 总是取最后两位（适配 YYYY-MM-DD 和 MM-DD）
+    month = parts[parts.length - 2].padStart(2, '0');
+    day = parts[parts.length - 1].padStart(2, '0');
+  } else {
+    return dateStr; // 实在格式不对就原样返回
+  }
   
   if (format === 'MM-DD') {
-    const month = parts[0].padStart(2, '0');
-    const day = parts[1].padStart(2, '0');
     return `${month}-${day}`;
   }
-  return dateStr;
+  return normalized;
 };
 
 // 1. 在组件内部定义标签数据（或放在外部常量）
@@ -311,13 +292,18 @@ const handleSelectSort = (val) => {
                 {/* 上：住 + 日期 */}
                 <View className="date-container">
                   <Text className="date-label">住</Text>
-                  <Text className="date-value">{formatDate(queryParams.checkInDate, 'MM-DD') || '02-06'}</Text>
+                  <Text className="date-value">
+                    {/* 删掉 || '02-06'，避免它在数据还没加载完时闪现错误日期 */}
+                    {formatDate(queryParams.checkInDate) || '--'} 
+                  </Text>
                 </View>
                 
                 {/* 下：离 + 日期 */}
                 <View className="date-container">
                   <Text className="date-label">离</Text>
-                  <Text className="date-value">{formatDate(queryParams.checkOutDate, 'MM-DD') || '02-07'}</Text>
+                  <Text className="date-value">
+                    {formatDate(queryParams.checkOutDate) || '--'}
+                  </Text>
                 </View>
               </View>
               
@@ -454,11 +440,11 @@ const handleSelectSort = (val) => {
             <HotelCard 
               key={hotel.id} 
               data={hotel} 
+              // 修改列表页中的跳转代码
               onClick={() => {
-                console.log('点击详情', hotel.id);
-                // 跳转到详情页，携带酒店 ID
                 Taro.navigateTo({
-                  url: `/pages/detail/index?id=${hotel.id}`
+                  // 将已有的日期状态传递给详情页
+                  url: `/pages/detail/index?id=${hotel.id}&checkIn=${queryParams.checkInDate}&checkOut=${queryParams.checkOutDate}`
                 });
               }}
             />

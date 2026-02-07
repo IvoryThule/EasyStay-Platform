@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, Swiper, SwiperItem, ScrollView } from '@tarojs/components';
 import { useRouter } from '@tarojs/taro'; // 引入 useRouter 钩子
 import Taro from '@tarojs/taro';
+import { Calendar } from '@nutui/nutui-react-taro';
 import './index.scss';
 
 const HotelDetail = () => {
@@ -11,13 +12,68 @@ const HotelDetail = () => {
   const [hotelInfo, setHotelInfo] = useState(null);
   const [rooms, setRooms] = useState([]);
 
-  // 页面加载时执行
+  // 【新增】日期相关状态
+  const [isVisible, setIsVisible] = useState(false); // 控制日历显示
+  const [dateRange, setDateRange] = useState({
+    checkIn: '',
+    checkOut: '',
+    nightCount: 1
+  });
+
+  // 【修复】iOS 日期兼容性处理函数
+  const calculateNights = (start, end) => {
+    if (!start || !end) return 1;
+    const currentYear = new Date().getFullYear();
+
+    // 将 "2月7日" 转换成 "2026/02/07" (iOS 必须格式)
+    const formatToStandard = (dateStr) => {
+      const cleanStr = dateStr.replace('月', '/').replace('日', '').trim();
+      const [m, d] = cleanStr.split('/');
+      return `${currentYear}/${m.padStart(2, '0')}/${d.padStart(2, '0')}`;
+    };
+
+    const sDate = new Date(formatToStandard(start));
+    const eDate = new Date(formatToStandard(end));
+
+    // 如果转换失败，防止崩溃
+    if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) return 1;
+
+    const diff = Math.ceil((eDate - sDate) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 1;
+  };
+
   useEffect(() => {
-    const { id } = router.params;
+    const { id, checkIn, checkOut } = router.params;
+    
+    // 【修改】初始化日期：优先使用传参，没有则设为默认
+    if (checkIn && checkOut) {
+      setDateRange({
+        checkIn: decodeURIComponent(checkIn),
+        checkOut: decodeURIComponent(checkOut),
+        nightCount: calculateNights(checkIn, checkOut)
+      });
+    }
+
     if (id) {
       fetchHotelDetail(id);
     }
   }, [router.params]);
+
+
+  // 【新增】选择日期后的回调
+  const onSelectDate = (param) => {
+    const [start, end] = param;
+    const checkIn = `${start[1]}月${start[2]}日`;
+    const checkOut = `${end[1]}月${end[2]}日`;
+    
+    setDateRange({
+      checkIn,
+      checkOut,
+      nightCount: calculateNights(checkIn, checkOut)
+    });
+    setIsVisible(false);
+    // 这里后续可以重新调用 fetchHotelDetail(id) 以根据新日期获取新价格
+  };
 
   // 模拟 API 请求函数
   const fetchHotelDetail = async (id) => {
@@ -118,17 +174,17 @@ const HotelDetail = () => {
           </View>
         </View>
 
-        {/* 4. 日历卡片 */}
-        <View className='calendar-bar'>
+        {/* 【修改】日历卡片：增加点击事件 */}
+        <View className='calendar-bar' onClick={() => setIsVisible(true)}>
           <View className='inner'>
             <View className='date-item'>
               <View className='label'>入住</View>
-              <View className='date'>2月7日</View>
+              <View className='date'>{dateRange.checkIn || '选择日期'}</View>
             </View>
-            <View className='night-count'>1晚</View>
-            <View className='date-item' style={{textAlign: 'right'}}>
+            <View className='night-count'>{dateRange.nightCount}晚</View>
+            <View className='date-item' style={{ textAlign: 'right' }}>
               <View className='label'>离店</View>
-              <View className='date'>2月8日</View>
+              <View className='date'>{dateRange.checkOut || '选择日期'}</View>
             </View>
           </View>
         </View>
@@ -154,6 +210,17 @@ const HotelDetail = () => {
           ))}
         </View>
       </ScrollView>
+
+      {/* 【新增】NutUI 日历组件 */}
+      <Calendar
+        visible={isVisible}
+        type="range"
+        startDate="2026-02-07" // 建议使用动态当前日期
+        endDate="2026-05-07"
+        onClose={() => setIsVisible(false)}
+        onConfirm={onSelectDate}
+      />
+
     </View>
   );
 };
