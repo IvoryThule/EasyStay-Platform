@@ -1,2 +1,910 @@
 ﻿/* [页面样式] 首页 */
 /* 待实现。 */
+
+@import "@nutui/nutui-react-taro/dist/style.css";
+// 定义颜色变量
+
+$primary-color: #3B82F6;
+$primary-gradient: linear-gradient(135deg, #3B82F6 0%, #6366F1 100%);
+$secondary-color: #6366F1;
+$accent-color: #10B981;
+$danger-color: #EF4444;
+$warning-color: #F59E0B;
+$text-primary: #1F2937;
+$text-secondary: #6B7280;
+$text-light: #9CA3AF;
+$bg-white: #FFFFFF;
+$bg-gray: #F9FAFB;
+$bg-light: #F3F4F6;
+$border-color: #E5E7EB;
+$border-light: #F3F4F6;
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+$shadow-blue: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+$radius-sm: 6px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 20px;
+$radius-2xl: 24px;
+$radius-full: 9999px;
+
+// 字体大小定义 - 整体放大
+$font-size-xs: 18px; // 原10px
+$font-size-sm: 20px; // 原12px
+$font-size-base: 24px; // 原14px
+$font-size-lg: 30px; // 原16px
+$font-size-xl: 30px; // 原18px
+$font-size-2xl: 32px; // 原20px
+
+// 字重定义
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// 动画定义
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// 页面容器
+.page-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: $bg-gray;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+// 主内容区域
+.main-content {
+  width: 100%;
+  height: 100vh;
+  box-sizing: border-box;
+  
+  // 隐藏滚动条
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+// 横幅轮播 - 调整位置，确保不被覆盖，文字上移
+.banner-swiper {
+  width: 100%;
+  height: 280px;
+  margin-bottom: 0; // 移除底部间距
+  
+  .banner-item {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    
+    .banner-image {
+      width: 100%;
+      height: 120%;
+      object-fit: cover; // 关键：保持图片比例并裁剪
+      object-position: center 70%; // 重点：向下偏移70%（默认center 50%）
+    }
+    
+    .banner-content {
+      position: absolute;
+      bottom: 18px;
+      left: 0;
+      right: 0;
+      // 调整内边距，文字上移
+      padding: 10px 20px 20px; // 上边距减小，使文字上移
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0) 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 6px; // 缩小间距，使文字更紧凑
+      
+      // 修改：减小促销标签高度，使其与一行文字等高
+      .promotion-tag {
+        align-self: flex-start;
+        background-color: $warning-color;
+        padding: 3px 10px; // 减小上下padding
+        border-radius: $radius-sm;
+        margin-bottom: 4px;
+        height: 35px; // 固定高度
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &.tag-premium {
+          background-color: $secondary-color;
+        }
+        
+        &.tag-flash {
+          background-color: $danger-color;
+        }
+        
+        .tag-text {
+          color: #FFFFFF;
+          font-size: 22px;
+          font-weight: $font-weight-bold;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        // 确保行高为1，避免额外高度
+        }
+      }
+      
+      .banner-title {
+        color: #FFFFFF;
+        font-size: 36px; // 放大标题
+        font-weight: $font-weight-bold;
+        line-height: 1.2; // 缩小行高
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        margin-bottom: 2px;
+      }
+      
+      .banner-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 26px; // 放大副标题
+        line-height: 1.3;
+      }
+    }
+  }
+}
+
+// 搜索区域 - 移除负margin，避免覆盖banner
+.search-section {
+  padding: 0 20px; // 参照HTML中的px-5
+  margin-top: -24px; // 参照HTML中的-mt-6
+  position: relative;
+  z-index: 10;
+  
+  .search-card {
+    background: $bg-white;
+    border-radius: $radius-2xl; // 参照HTML中的rounded-3xl
+    padding: 36px 24px; // 参照HTML中的p-6
+    box-shadow: $shadow-xl;
+    animation: slideUp 0.5s ease-out forwards;
+    display: flex;
+    flex-direction: column;
+    gap: 40px; // 参照HTML中的space-y-5
+    
+    .search-row {
+      padding-bottom: 16px; // 参照HTML中的pb-4
+      border-bottom: 1px solid $border-light;
+      
+      &:last-of-type {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      
+      &.location-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-left: 25px; 
+        .location-select {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          gap: 12px; // 参照HTML中的space-x-3
+            
+          .location-icon {
+            font-size: 33px; // 参照HTML中的text-2xl
+            color: $primary-color;
+          }
+          
+          .location-info {
+            flex: 1;
+            
+            .location-label {
+              display: block;
+              font-size: $font-size-sm; // 放大
+              color: $text-light;
+              text-transform: uppercase;
+              letter-spacing: 0.05em; // 参照HTML中的tracking-wider
+              margin-bottom: 2px;
+            }
+            
+            .location-value {
+              font-size: $font-size-xl; // 参照HTML中的text-lg
+              font-weight: $font-weight-semibold; // 参照HTML中的font-semibold
+              color: $text-primary;
+            }
+          }
+          
+          .arrow-icon {
+            font-size: $font-size-lg;
+            color: $text-light;
+            margin-left: 4px;
+          }
+        }
+        
+        .location-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: $font-size-base; // 放大
+          color: $primary-color;
+          font-weight: $font-weight-medium; // 参照HTML中的font-medium
+          display: flex;
+          align-items: center;
+          gap: 2px; // 参照HTML中的mr-1
+            
+          .btn-icon {
+            font-size: $font-size-base;
+          }
+          
+          .btn-text {
+            font-size: $font-size-base;
+            font-weight: $font-weight-medium;
+          }
+        }
+      }
+      
+      &.date-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px; // 参照HTML中的space-x-4
+        
+        .date-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center; // 水平居中
+          .date-label {
+            display: block;
+            font-size: 24px; // 放大
+            color: $text-light;
+            text-transform: uppercase;
+            letter-spacing: 0.05em; // 参照HTML中的tracking-wider
+            margin-bottom: 4px;
+          }
+          
+          .date-info {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            
+            .date-value {
+              font-size: 35px; // 放大
+              font-weight: $font-weight-bold; // 参照HTML中的font-bold
+              color: $text-primary;
+            }
+            
+            .date-weekday {
+              font-size: 22px; // 放大
+              font-weight: $font-weight-normal; // 参照HTML中的font-normal
+              color: $text-secondary;
+            }
+          }
+        }
+        
+        .night-count {
+          padding: 6px 14px; // 调整内边距
+          background-color: rgba(59, 130, 246, 0.1); // 参照HTML中的bg-blue-50
+          border-radius: $radius-full;
+          font-size: 25px; // 放大
+          color: $primary-color;
+          font-weight: $font-weight-bold;
+          white-space: nowrap;
+          
+          .night-text {
+            font-size: 25px;
+            font-weight: $font-weight-bold;
+          }
+        }
+      }
+      
+      &.keyword-row {
+        display: flex;
+        align-items: center;
+        gap: 12px; // 参照HTML中的space-x-3
+        
+        .search-icon {
+          font-size: 24px; // 放大
+          color: $text-light;
+        }
+        
+        .search-input {
+          flex: 1;
+          font-size: $font-size-base; // 放大
+          color: $text-primary;
+          background: none;
+          border: none;
+          outline: none;
+          padding: 8px 0;
+          
+          &::placeholder {
+            color: #D1D5DB; // 参照HTML中的placeholder:text-gray-300
+            font-size: $font-size-base; // 放大
+          }
+        }
+        
+        .clear-icon {
+          font-size: $font-size-lg;
+          color: $text-light;
+          padding: 4px;
+          border-radius: 50%;
+          background-color: $bg-light;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+      }
+      
+      &.filter-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 8px; // 参照HTML中的pb-2
+        
+        .filter-content {
+          display: flex;
+          align-items: center;
+          gap: 12px; // 参照HTML中的space-x-3
+          
+          .filter-icon {
+            font-size: $font-size-xl; // 放大
+            color: $text-light;
+          }
+          
+          .filter-text {
+            font-size: $font-size-base; // 放大
+            color: $text-light;
+          }
+        }
+        
+        .filter-arrow {
+          font-size: $font-size-lg;
+          color: #D1D5DB; // 参照HTML中的text-gray-300
+        }
+      }
+      
+      // 房间数量样式（入住人数已删除）
+      &.rooms-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        
+        .rooms-label {
+          font-size: 30px; // 放大
+          color: rgba(0, 0, 0, 0.913);
+          text-transform: uppercase;
+        }
+        
+        .rooms-controls {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          background-color: rgba(59, 130, 246, 0.1); // 与night-count保持一致
+          border-radius: $radius-full;
+          padding: 10px 18px;
+          
+          .control-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: $bg-white;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: $primary-color;
+            padding: 0;
+            line-height: 1;
+            font-weight: $font-weight-bold;
+            
+            &.minus {
+              color: $text-light;
+              align-items: center;
+              justify-content: center;
+            }
+            
+            &.plus {
+              color: $primary-color;
+              border-color: $primary-color;
+            }
+          }
+          
+          .rooms-count {
+            font-size: 24px;
+            font-weight: $font-weight-bold;
+            color: $primary-color;
+            min-width: 50px;
+            text-align: center;
+            align-items: center;
+          }
+        }
+      }
+    }
+    
+    // 开始搜索按钮 - 横向拉大，字体变大
+    .search-button {
+      background: linear-gradient(to right, $primary-color, $secondary-color); // 参照HTML中的from-blue-600 to-indigo-600
+      color: #FFFFFF;
+      border: none;
+      border-radius: $radius-xl; // 参照HTML中的rounded-2xl
+      padding: 18px; // 增加内边距，使按钮更大
+      font-size: 12px; // 放大字体
+      font-weight: $font-weight-bold;
+      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2); // 参照HTML中的shadow-lg shadow-blue-200
+      transition: transform 0.2s ease;
+      width: 100%; // 横向拉大
+      margin-top: 10px;
+      
+
+      // 关键：使用grid布局，可以更好地控制内部元素
+      display: grid;
+      place-items: center;
+      min-height: 80px;
+
+      &:active {
+        transform: scale(0.95); // 参照HTML中的active:scale-95
+      }
+      
+      .button-text {
+        color: #FFFFFF;
+        font-size: 40px; // 放大字体
+        font-weight: $font-weight-bold;
+        letter-spacing: 4px; // 增加字间距
+        line-height: 2;
+    
+    
+      }
+    }
+  }
+}
+
+// 热门城市 - 放大组件
+.popular-cities {
+  padding: 0 20px; // 参照HTML中的px-5
+  margin-top: 28px; // 增加间距
+  
+  .section-title {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 16px; // 增加间距
+    
+    .title {
+      font-size: $font-size-lg; // 放大标题
+      font-weight: $font-weight-bold;
+      color: $text-primary;
+    }
+    
+    .subtitle {
+      font-size: $font-size-base; // 放大副标题
+      color: $text-light;
+    }
+  }
+  
+  .cities-scroll {
+    width: 100%;
+    white-space: nowrap;
+    
+    .cities-container {
+      display: inline-flex;
+      gap: 14px; // 增加间距
+      padding-right: 16px;
+      
+      .city-item {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 14px 18px; // 增加内边距
+        background-color: $bg-white;
+        border: 1px solid $border-color;
+        border-radius: $radius-lg;
+        min-width: 90px; // 增加宽度
+        transition: all 0.2s ease;
+        
+        &.active {
+          background-color: rgba(59, 130, 246, 0.1);
+          border-color: $primary-color;
+          
+          .city-name {
+            color: $primary-color;
+            font-weight: $font-weight-bold;
+          }
+        }
+        
+        .city-name {
+          font-size: $font-size-base; // 放大字体
+          font-weight: $font-weight-medium;
+          color: $text-primary;
+          margin-bottom: 6px; // 增加间距
+        }
+        
+        .city-count {
+          font-size: $font-size-xs; // 放大字体
+          color: $text-light;
+        }
+      }
+    }
+  }
+}
+
+// 快速标签区域 - 放大组件
+.quick-tags-section {
+  padding: 0 20px; // 参照HTML中的px-5
+  margin-top: 28px; // 增加间距
+  
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 16px; // 增加间距
+    
+    .section-title {
+      font-size: $font-size-lg; // 放大标题
+      font-weight: $font-weight-bold;
+      color: $text-primary;
+    }
+    
+    .section-subtitle {
+      font-size: $font-size-base; // 放大副标题
+      color: $text-light;
+    }
+  }
+  
+  .tags-scroll {
+    width: 100%;
+    white-space: nowrap;
+    
+    .tags-container {
+      display: inline-flex;
+      flex-wrap: wrap; // 参照HTML中的flex-wrap
+      gap: 10px; // 增加间距
+      padding-right: 16px;
+      
+      .tag-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px; // 增加间距
+        padding: 10px 18px; // 增加内边距
+        background-color: $bg-white;
+        border: 1px solid $border-light; // 参照HTML中的border-gray-100
+        border-radius: $radius-full;
+        font-size: $font-size-base; // 放大字体
+        color: $text-secondary;
+        box-shadow: $shadow-sm; // 参照HTML中的shadow-sm
+        transition: all 0.3s ease; // 参照HTML中的transition-colors
+        cursor: pointer;
+        
+        &:hover {
+          border-color: rgba(59, 130, 246, 0.2); // 参照HTML中的hover:border-blue-200
+          color: $primary-color; // 参照HTML中的hover:text-blue-600
+        }
+        
+        &.active {
+          background-color: rgba(59, 130, 246, 0.1);
+          border-color: $primary-color;
+          
+          .tag-icon {
+            color: $primary-color;
+          }
+          
+          .tag-label {
+            color: $primary-color;
+            font-weight: $font-weight-medium;
+          }
+        }
+        
+        .tag-icon {
+          font-size: $font-size-base; // 放大图标
+          color: $text-secondary;
+        }
+        
+        .tag-label {
+          font-size: $font-size-base; // 放大字体
+          color: $text-secondary;
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+}
+
+// 最近浏览区域 - 放大组件
+.recent-section {
+  padding: 40px 24px 0; // 参照HTML中的mt-8和px-5
+  
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px; // 增加间距
+    
+    .section-title-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 14px; // 增加间距
+      
+      .section-title {
+        font-size: $font-size-xl; // 放大标题
+        font-weight: $font-weight-bold;
+        color: $text-primary;
+      }
+      
+      .section-badge {
+        font-size: $font-size-base; // 放大
+        color: #FFFFFF;
+        background-color: $primary-color;
+        padding: 6px 12px; // 增加内边距
+        border-radius: $radius-full;
+      }
+    }
+    
+    .clear-history {
+      font-size: $font-size-base; // 放大字体
+      color: $text-light;
+    }
+  }
+  
+  .hotels-scroll {
+    width: 100%;
+    white-space: nowrap;
+    
+    .hotels-container {
+      display: inline-flex;
+      gap: 24px; // 增加间距
+      padding-right: 20px;
+      
+      .hotel-card {
+        display: inline-flex;
+        flex-direction: column;
+        min-width: 180px; // 增加宽度
+        
+        .hotel-image {
+          width: 100%;
+          height: 140px; // 增加高度
+          object-fit: cover;
+          border-radius: $radius-xl; // 参照HTML中的rounded-xl
+          border: 1px solid $border-light; // 参照HTML中的border border-gray-100
+        }
+        
+        .hotel-info {
+          margin-top: 14px; // 增加间距
+          display: flex;
+          flex-direction: column;
+          gap: 8px; // 增加间距
+          
+          .hotel-name {
+            font-size: $font-size-base; // 放大字体
+            font-weight: $font-weight-bold;
+            color: $text-primary;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          
+          .hotel-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px; // 增加间距
+            
+            .rating-star {
+              font-size: $font-size-base; // 放大
+              color: $warning-color;
+            }
+            
+            .rating-value {
+              font-size: $font-size-base; // 放大
+              font-weight: $font-weight-bold;
+              color: $text-primary;
+            }
+            
+            .rating-reviews {
+              font-size: $font-size-sm; // 放大
+              color: $text-light;
+            }
+          }
+          
+          .hotel-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px; // 增加间距
+            margin-top: 4px; // 增加间距
+            
+            .hotel-tag {
+              font-size: $font-size-sm; // 放大
+              color: $text-secondary;
+              padding: 6px 10px; // 增加内边距
+              background-color: $bg-light;
+              border-radius: $radius-sm;
+            }
+          }
+          
+          .hotel-price {
+            display: flex;
+            align-items: baseline;
+            gap: 6px; // 增加间距
+            margin-top: 8px; // 增加间距
+            
+            .price-symbol {
+              font-size: $font-size-base; // 放大
+              color: $primary-color;
+              font-weight: $font-weight-bold;
+            }
+            
+            .price-value {
+              font-size: $font-size-base; // 放大
+              color: $primary-color;
+              font-weight: $font-weight-bold;
+            }
+            
+            .price-unit {
+              font-size: $font-size-sm; // 放大
+              color: $text-light;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// 底部留白
+.bottom-spacing {
+  height: 100px; // 为底部留出足够空间
+  width: 100%;
+}
+
+// 加载状态
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+  
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid $border-light;
+      border-top-color: $primary-color;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    .loading-text {
+      font-size: $font-size-base;
+      color: $text-secondary;
+    }
+  }
+}
+
+// 城市选择器
+.city-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+  
+  .city-picker {
+    width: 100%;
+    background-color: $bg-white;
+    border-radius: $radius-xl $radius-xl 0 0;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    
+    .picker-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid $border-light;
+      
+      .picker-title {
+        font-size: $font-size-lg;
+        font-weight: $font-weight-bold;
+        color: $text-primary;
+      }
+      
+      .picker-close {
+        font-size: $font-size-xl;
+        color: $text-light;
+        padding: 4px;
+      }
+    }
+    
+    .picker-list {
+      flex: 1;
+      max-height: calc(70vh - 60px);
+      
+      .picker-item {
+        padding: 16px 20px;
+        border-bottom: 1px solid $border-light;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        
+        &.selected {
+          background-color: rgba(59, 130, 246, 0.05);
+          
+          .picker-item-name {
+            color: $primary-color;
+            font-weight: $font-weight-bold;
+          }
+        }
+        
+        .picker-item-name {
+          font-size: $font-size-lg;
+          color: $text-primary;
+        }
+        
+        .picker-item-count {
+          font-size: $font-size-sm;
+          color: $text-light;
+        }
+      }
+    }
+  }
+}
+
+// 响应式适配
+@media (min-width: 768px) {
+  .page-container {
+    max-width: 375px;
+    margin: 0 auto;
+    box-shadow: $shadow-xl;
+    border-radius: 40px; // 参照原设计中的rounded-[40px]
+    overflow: hidden;
+    min-height: 812px; // 参照原设计中的h-[812px]
+  }
+}
+
+// 安全区域适配（针对全面屏手机）
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

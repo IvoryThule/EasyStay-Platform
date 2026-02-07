@@ -1,2 +1,22 @@
 ﻿/* [样式] AI 悬浮球样式 */
 /* 待实现。 */
+
+.ai-float-ball {
+  position: fixed;
+  left: 50%;
+  bottom: 90px;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  background: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(37,99,235,0.18);
+  z-index: 101;
+}
+.ai-icon {
+  color: #fff;
+  font-size: 32px;
+}

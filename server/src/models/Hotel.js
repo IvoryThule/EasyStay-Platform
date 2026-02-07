@@ -42,6 +42,11 @@ const Hotel = sequelize.define('Hotel', {
     defaultValue: 0,
     comment: '0:审核中, 1:已发布, 2:驳回, 3:下线'
   },
+  reject_reason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: '驳回原因，仅status=2时有值'
+  },
   latitude: {
     type: DataTypes.DOUBLE
   },

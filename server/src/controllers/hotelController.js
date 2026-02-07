@@ -245,6 +245,63 @@ const deleteHotel = async (req, res) => {
 // ================= 房型管理 (RoomType) =================
 
 /**
+<<<<<<< HEAD
+=======
+ * 获取指定酒店的房型列表
+ * GET /api/hotel/roomtype/list
+ * Query: hotel_id
+ */
+const getRoomTypeList = async (req, res) => {
+  try {
+    const { hotel_id } = req.query;
+
+    if (!hotel_id) {
+      return fail(res, 'hotel_id is required', 400);
+    }
+
+    const roomTypes = await RoomType.findAll({
+      where: { hotel_id },
+      order: [['price', 'ASC']] // 按价格升序
+    });
+
+    success(res, roomTypes);
+  } catch (error) {
+    console.error('Get RoomType List Error:', error);
+    fail(res, 'Failed to fetch room types', 500);
+  }
+};
+
+/**
+ * 获取房型详情
+ * GET /api/hotel/roomtype/detail/:id
+ */
+const getRoomTypeDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const roomType = await RoomType.findByPk(id, {
+      include: [
+        {
+          model: Hotel,
+          as: 'hotel',
+          attributes: ['id', 'name', 'address', 'city']
+        }
+      ]
+    });
+
+    if (!roomType) {
+      return fail(res, 'RoomType not found', 404);
+    }
+
+    success(res, roomType);
+  } catch (error) {
+    console.error('Get RoomType Detail Error:', error);
+    fail(res, 'Failed to fetch room type detail', 500);
+  }
+};
+
+/**
+
  * 添加房型
  * POST /api/hotel/roomtype/add
  * Body: { hotel_id, name, price, stock }
@@ -342,7 +399,12 @@ module.exports = {
   getDetail,
   update,
   deleteHotel,
+
+  getRoomTypeList,
+  getRoomTypeDetail,
   addRoomType,
   updateRoomType,
   deleteRoomType
 };
+
+
