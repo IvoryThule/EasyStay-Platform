@@ -1,25 +1,38 @@
 ﻿const express = require('express');
 const router = express.Router();
 const GLMService = require('../services/GLMService');
+const aiController = require('../controllers/aiController');
 const { success, fail } = require('../utils/response');
 
 /**
- * AI 通用问答接口
- * POST /api/ai/chat
- * Body: { prompt: "你好", mode: "GENERAL_ASSISTANT" }
- * mode 可选值: BOOKING_DECISION_ENGINE | HOTEL_AUDIT_ASSISTANT | GENERAL_ASSISTANT
+ * AI 通用问答接口 & 智能助手接口
+ * 支持两种模式：
+ * 1. 新版助手: Body: { message: "...", history: [], context: {} } -> 路由到 aiController
+ * 2. 旧版通用: Body: { prompt: "...", mode: "..." } -> 保持原有逻辑
  */
 router.post('/chat', async (req, res) => {
+    // 优先处理新版 AI 助手请求
+    if (req.body.message !== undefined || req.body.history !== undefined) {
+        return aiController.chat(req, res);
+    }
+
+    // 旧版逻辑保持不变
     try {
         const { prompt, mode = 'GENERAL_ASSISTANT' } = req.body;
         if (!prompt) return fail(res, 'Prompt is required', 400);
 
+        // 注意：GLMService 现在导出的 generateText 实际上是实例方法的封装，用法不变
         const result = await GLMService.generateText(prompt, mode);
         success(res, { content: result });
     } catch (error) {
         fail(res, error.message, 500);
     }
 });
+
+/**
+ * 智能推荐接口
+ */
+router.post('/recommend', aiController.recommend);
 
 /**
  * 🔥 AI 智能订房决策接口 (核心创新)
