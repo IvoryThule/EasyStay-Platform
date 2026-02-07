@@ -84,6 +84,40 @@ const getUserOrders = async (req, res) => {
 };
 
 /**
+ * 获取订单详情
+ * GET /api/order/detail/:orderId
+ */
+const getOrderDetail = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const user_id = req.user.id;
+
+    const order = await Order.findOne({
+      where: { id: orderId, user_id },
+      include: [
+        { 
+          model: Hotel, 
+          attributes: ['id', 'name', 'address', 'city', 'cover_image', 'star']
+        },
+        {
+          model: RoomType,
+          attributes: ['id', 'name', 'price']
+        }
+      ]
+    });
+
+    if (!order) {
+      return fail(res, '订单不存在', 404);
+    }
+
+    success(res, order);
+  } catch (error) {
+    console.error('获取订单详情错误:', error);
+    fail(res, '获取订单详情失败', 500);
+  }
+};
+
+/**
  * 取消订单
  * POST /api/order/cancel
  * Body: { orderId }
@@ -146,6 +180,7 @@ const payOrder = async (req, res) => {
 module.exports = {
   createOrder,
   getUserOrders,
+  getOrderDetail,
   cancelOrder,
   payOrder
 };
