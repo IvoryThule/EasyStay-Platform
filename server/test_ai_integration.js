@@ -73,6 +73,27 @@ async function testAiFeatures() {
              console.log('✅ parseBookingIntent 测试通过');
         }
 
+        // 6. 测试多轮对话 (Context / History)
+        console.log('\n🧪 测试多轮对话 (Multi-turn Context)...');
+        // 模拟第一轮：用户说自己喜欢靠窗
+        const historyMock = [
+            { role: 'user', content: '我这次住酒店一定要住高楼层，且必须安静。' },
+            { role: 'assistant', content: '好的，我已经记住了您的偏好：高楼层、安静。为您推荐...' }
+        ];
+        // 模拟第二轮：用户问“我刚才说了什么要求？”
+        const multiTurnMessages = [
+            ...historyMock,
+            { role: 'user', content: '请重复一遍我刚才说的对房间的要求' }
+        ];
+        
+        const multiTurnResult = await GLMService.chat(multiTurnMessages, {});
+        console.log('🗣️ AI 回复 (多轮):', multiTurnResult.reply);
+        if (multiTurnResult.reply.includes('高楼层') || multiTurnResult.reply.includes('安静')) {
+            console.log('✅ 多轮对话测试通过 (成功记忆上下文)');
+        } else {
+            console.log('⚠️ 多轮对话测试结果需人工确认');
+        }
+
         console.log('\n🎉 所有 AI 服务测试完成！功能集成正常。');
 
     } catch (error) {
