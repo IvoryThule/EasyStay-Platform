@@ -1,180 +1,225 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
-  Form, Input, InputNumber, Button, Card, message, Upload, 
-  Row, Col, Select, DatePicker, Divider, TimePicker 
+  Form, Input, InputNumber, Button, Card, message, Upload, Space,
+  Row, Col, Select, DatePicker, Divider, TimePicker, Spin 
 } from 'antd';
-import { PlusOutlined, BookOutlined, EnvironmentOutlined, MinusCircleOutlined, ShopOutlined, CarOutlined, RocketOutlined, GiftOutlined } from '@ant-design/icons';
+import { 
+  PlusOutlined, BookOutlined, EnvironmentOutlined, 
+  MinusCircleOutlined, ShopOutlined, TranslationOutlined
+} from '@ant-design/icons';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import request from '../utils/request';
+import { ROUTE_PATHS } from '../utils/constants';
+import dayjs from 'dayjs';
 
-const { TextArea } = Input;
 const { Option } = Select;
 
 const HotelEdit = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { id } = useParams(); // 从路由获取酒店ID: /hotel/edit/:id
+  const [searchParams] = useSearchParams();
+  
+  // 判断是否为只读模式：URL带有 readonly=true 参数时禁用表单
+  const isReadOnly = searchParams.get('readonly') === 'true';
 
-const onFinish = async (values) => {
-  setLoading(true);
-  try {
-    // 处理 payload 以匹配 hotelController.js 的 create 接口
-    const payload = {
-      name: values.name,
-      address: values.address,
-      city: values.city || "上海", // 后端必填项，如果表单没写则给个默认值
-      star: values.star,
-      // 这里的 price 取房型列表中的最低价，或者根据业务逻辑设定
-      price: values.room_types?.[0]?.price || 0, 
-      opening_date: values.opening_date ? values.opening_date.format('YYYY-MM-DD') : null,
-      // 将表单扩展字段转为后端 tags 或其他字段
-      tags: [values.nearby_attractions, values.traffic_mall].filter(Boolean),
-      // 房型数据处理
-      room_types: values.room_types?.map(room => ({
-        ...room,
-        available_time: room.time_range ? 
-          [room.time_range[0].format('HH:mm'), room.time_range[1].format('HH:mm')] : null
-      })),
-      status: 0 // 后端定义：0 为审核中
-    };
-
-    const res = await request.post('/hotel/create', payload); 
-    if (res.success || res.status === 200) {
-      message.success('酒店及房型资料已成功提交审核');
-      form.resetFields();
+  // 1. 初始化：如果是编辑模式（有ID），则获取酒店详情
+  useEffect(() => {
+    if (id) {
+      fetchHotelDetail(id);
     }
-  } catch (error) {
-    message.error('提交失败：' + (error.response?.data?.message || '网络异常'));
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [id]);
+
+  const fetchHotelDetail = async (hotelId) => {
+    setLoading(true);
+    try {
+      const res = await request.get(`/hotel/detail/${hotelId}`);
+      const data = res.data;
+
+      // 解析 tags 数组中的特殊信息（EN:英文名, OPENING:开业时间）
+      const nameEn = data.tags?.find(t => t.startsWith('EN:'))?.split(':')[1] || '';
+      const openingDate = data.tags?.find(t => t.startsWith('OPENING:'))?.split(':')[1];
+
+      // 将后端数据填充到表单
+      form.setFieldsValue({
+        name: data.name,
+        name_en: nameEn,
+        address: data.address,
+        city: data.city,
+        star: data.star,
+        price: data.price,
+        opening_date: openingDate ? dayjs(openingDate) : null,
+        // 回显房型数据
+        room_types: data.roomTypes?.map(rt => ({
+          type_name: rt.name,
+          price: rt.price,
+          stock: rt.stock
+        }))
+      });
+    } catch (error) {
+      console.error('Fetch Detail Error:', error);
+      message.error('获取酒店详情失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. 提交表单逻辑
+  const onFinish = async (values) => {
+    setLoading(true);
+    try {
+      // 构造符合后端要求的 tags
+      const tags = [
+        `EN:${values.name_en || ''}`,
+        `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`
+      ];
+
+      const payload = {
+        id: id, // 如果是更新，必须带上酒店ID
+        name: values.name,
+        address: values.address,
+        city: values.city || "上海",
+        star: values.star,
+        price: values.price,
+        tags: tags,
+        room_types: values.room_types // 房型列表
+      };
+
+      // 根据是否有 ID 判断调用创建还是更新接口
+      const apiUrl = id ? '/hotel/update' : '/hotel/create';
+      await request.post(apiUrl, payload);
+
+      message.success(id ? '信息已更新，请等待重新审核' : '酒店发布成功，请等待审核');
+      navigate('/hotel/status'); // 跳转回状态列表页
+    } catch (error) {
+      message.error(error.response?.data?.message || '提交失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div style={{ padding: '24px', background: '#f5f7fa' }}>
+    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
       <Card 
-        title={<span><BookOutlined /> 录入酒店详细资料</span>} 
-        variant="borderless"
+        title={
+          <Space>
+            <ShopOutlined />
+            <span>{id ? (isReadOnly ? '房源详情预览' : '修改被驳回信息') : '录入新房源'}</span>
+          </Space>
+        }
+        bordered={false}
+        extra={<Button onClick={() => navigate(-1)}>返回</Button>}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={onFinish}
-          initialValues={{ star: 3 }}
-        >
-          {/* --- 基础信息 --- */}
-          <Divider orientation="left">基础信息</Divider>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="酒店中文名" name="name" rules={[{ required: true, message: '请输入酒店名称' }]}>
-                <Input placeholder="如：上海陆家嘴禧酒店" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="酒店英文名" name="name_en">
-                <Input placeholder="Hotel English Name" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="星级评分" name="star" rules={[{ required: true }]}>
-                <Select>
-                  {[1, 2, 3, 4, 5].map(s => <Option key={s} value={s}>{s} 星级</Option>)}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="开业年份" name="opening_date" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}>
-                <Input placeholder="酒店前台或经理电话" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item label="地理位置" name="address" rules={[{ required: true }]}>
-            <Input prefix={<EnvironmentOutlined />} placeholder="请输入酒店详细街道地址" />
-          </Form.Item>
-
-          {/* --- 房型配置 (重点要求) --- */}
-          <Divider orientation="left">房型与具体价格/时间</Divider>
-          <Form.List 
-            name="room_types" 
-            rules={[{ validator: async (_, names) => (!names || names.length < 1) && Promise.reject(new Error('请至少添加一种房型')) }]}
+        <Spin spinning={loading}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            disabled={isReadOnly} // 核心：如果是查看模式，禁用所有交互
+            initialValues={{ star: 3, city: '上海' }}
           >
-            {(fields, { add, remove }, { errors }) => (
-              <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Row key={key} gutter={12} align="bottom" style={{ marginBottom: 16, background: '#f9f9f9', padding: '12px', borderRadius: '4px' }}>
-                    <Col span={7}>
-                      <Form.Item {...restField} label="房型名称" name={[name, 'type_name']} rules={[{ required: true, message: '房型' }]}>
-                        <Input placeholder="例如：行政大床房" />
-                      </Form.Item>
-                    </Col>
-                    <Col span={6}>
-                      <Form.Item {...restField} label="每晚价格" name={[name, 'price']} rules={[{ required: true, message: '价格' }]}>
-                        <InputNumber min={0} prefix="￥" style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={9}>
-                      <Form.Item {...restField} label="退房办理时间范围" name={[name, 'time_range']} rules={[{ required: true }]}>
-                        <TimePicker.RangePicker format="HH:mm" style={{ width: '100%' }} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={2}>
-                      <Form.Item label=" ">
-                        <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                ))}
-                <Form.Item>
-                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>添加房型</Button>
-                  <Form.ErrorList errors={errors} />
+            <Divider orientation="left">基本信息</Divider>
+            <Row gutter={24}>
+              <Col span={12}>
+                <Form.Item name="name" label="酒店名称" rules={[{ required: true, message: '请输入名称' }]}>
+                  <Input prefix={<BookOutlined />} placeholder="例：云端大酒店" />
                 </Form.Item>
-              </>
-            )}
-          </Form.List>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="name_en" label="英文名称/拼音">
+                  <Input prefix={<TranslationOutlined />} placeholder="Cloud Hotel" />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          {/* --- 补充信息 (新增要求) --- */}
-          <Divider orientation="left">补充信息</Divider>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label={<span><RocketOutlined /> 热门景点/周边设施</span>} name="nearby_attractions">
-                <TextArea rows={3} placeholder="例如：东方明珠 (1.2km), 外滩 (步行5分钟)..." />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label={<span><CarOutlined /> 交通出行/商场</span>} name="traffic_mall">
-                <TextArea rows={3} placeholder="例如：地铁2号线南京东路站, 恒隆广场..." />
-              </Form.Item>
-            </Col>
-          </Row>
+            <Row gutter={24}>
+              <Col span={8}>
+                <Form.Item name="city" label="所在城市">
+                  <Select placeholder="选择城市">
+                    <Option value="上海">上海</Option>
+                    <Option value="北京">北京</Option>
+                    <Option value="杭州">杭州</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={16}>
+                <Form.Item name="address" label="详细地址" rules={[{ required: true }]}>
+                  <Input prefix={<EnvironmentOutlined />} placeholder="街道、门牌号" />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          <Form.Item label={<span><GiftOutlined /> 价格折扣/优惠场景方案</span>} name="discount_desc">
-            <TextArea rows={2} placeholder="例如：连住3晚享受8折, 周末特惠, 包含早晚餐套餐等..." />
-          </Form.Item>
+            <Row gutter={24}>
+              <Col span={8}>
+                <Form.Item name="star" label="酒店星级">
+                  <Select>
+                    <Option value={3}>三星级</Option>
+                    <Option value={4}>四星级</Option>
+                    <Option value={5}>五星级</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="price" label="起步价格 (¥)" rules={[{ required: true }]}>
+                  <InputNumber min={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="opening_date" label="开业日期">
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
 
-          {/* --- 图片上传 --- */}
-          <Divider orientation="left">酒店图片</Divider>
-          <Form.Item name="images">
-            <Upload listType="picture-card" maxCount={5} beforeUpload={() => false}>
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>上传图片</div>
+            <Divider orientation="left">房型配置</Divider>
+            <Form.List name="room_types">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <Row key={key} gutter={16} align="baseline" style={{ background: '#fafafa', padding: '16px', marginBottom: '16px', borderRadius: '8px' }}>
+                      <Col span={8}>
+                        <Form.Item {...restField} name={[name, 'type_name']} label="房型名称" rules={[{ required: true }]}>
+                          <Input placeholder="例：豪华大床房" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={7}>
+                        <Form.Item {...restField} name={[name, 'price']} label="价格">
+                          <InputNumber min={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={7}>
+                        <Form.Item {...restField} name={[name, 'stock']} label="库存量">
+                          <InputNumber min={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      {!isReadOnly && (
+                        <Col span={2}>
+                          <Button type="text" danger icon={<MinusCircleOutlined />} onClick={() => remove(name)} />
+                        </Col>
+                      )}
+                    </Row>
+                  ))}
+                  {!isReadOnly && (
+                    <Form.Item>
+                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                        添加新房型
+                      </Button>
+                    </Form.Item>
+                  )}
+                </>
+              )}
+            </Form.List>
+
+            {!isReadOnly && (
+              <div style={{ marginTop: '32px', textAlign: 'center' }}>
+                <Button type="primary" htmlType="submit" size="large" style={{ width: '200px' }} loading={loading}>
+                  {id ? '提交修改并重新审核' : '立即发布房源'}
+                </Button>
               </div>
-            </Upload>
-          </Form.Item>
-
-          <Form.Item style={{ marginTop: 32 }}>
-            <Button type="primary" htmlType="submit" loading={loading} size="large" block>
-              确认并提交审核
-            </Button>
-          </Form.Item>
-        </Form>
+            )}
+          </Form>
+        </Spin>
       </Card>
     </div>
   );

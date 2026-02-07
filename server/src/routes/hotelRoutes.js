@@ -1,4 +1,4 @@
-﻿// [API] /api/hotel (CRUD, list, detail)
+﻿﻿// [API] /api/hotel (CRUD, list, detail)
 const express = require('express');
 const router = express.Router();
 const hotelController = require('../controllers/hotelController');
@@ -52,11 +52,13 @@ router.post('/delete',
 
 // === 房型管理 ===
 
+
 // 获取酒店的房型列表 (公开)
 router.get('/roomtype/list', hotelController.getRoomTypeList);
 
 // 获取房型详情 (公开)
 router.get('/roomtype/detail/:id', hotelController.getRoomTypeDetail);
+
 
 router.post('/roomtype/add', 
   authMiddleware, 
@@ -76,4 +78,6 @@ router.post('/roomtype/delete',
   hotelController.deleteRoomType
 );
 
+
 module.exports = router;
+

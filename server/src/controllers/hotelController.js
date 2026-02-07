@@ -1,4 +1,4 @@
-﻿// [逻辑] 酒店筛选、录入、审核逻辑
+﻿﻿// [逻辑] 酒店筛选、录入、审核逻辑
 const { Op } = require('sequelize');
 const { Hotel, RoomType, User } = require('../models');
 const { success, fail } = require('../utils/response');
@@ -245,6 +245,8 @@ const deleteHotel = async (req, res) => {
 // ================= 房型管理 (RoomType) =================
 
 /**
+<<<<<<< HEAD
+=======
  * 获取指定酒店的房型列表
  * GET /api/hotel/roomtype/list
  * Query: hotel_id
@@ -299,6 +301,7 @@ const getRoomTypeDetail = async (req, res) => {
 };
 
 /**
+
  * 添加房型
  * POST /api/hotel/roomtype/add
  * Body: { hotel_id, name, price, stock }
@@ -396,10 +399,12 @@ module.exports = {
   getDetail,
   update,
   deleteHotel,
+
   getRoomTypeList,
   getRoomTypeDetail,
   addRoomType,
   updateRoomType,
   deleteRoomType
 };
+
 

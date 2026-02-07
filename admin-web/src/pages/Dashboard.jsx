@@ -1,126 +1,233 @@
-﻿// [页面] 欢迎页/仪表盘
-import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Button, Typography, Space, Divider } from 'antd';
+﻿import React, { useState, useMemo } from 'react';
 import { 
-  CloudUploadOutlined, 
-  AuditOutlined, 
-  DashboardOutlined, 
-  LogoutOutlined,
-  HomeOutlined,
-  LineChartOutlined
+  Row, Col, Card, Statistic, Button, Typography, Space, 
+  Tag, Progress, Segmented, List, Avatar, Divider, Badge
+} from 'antd'; // 已补全 Badge
+import { 
+  RiseOutlined, ThunderboltOutlined, CheckCircleOutlined, 
+  UserOutlined, GlobalOutlined, RadarChartOutlined,
+  DownloadOutlined, InfoCircleOutlined, FilterOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { STORAGE_KEYS, ROUTE_PATHS } from '../utils/constants';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Bar, PieChart, Pie, Cell, Legend, ComposedChart, Line, Radar, RadarChart, 
+  PolarGrid, PolarAngleAxis, PolarRadiusAxis
+} from 'recharts';
 
 const { Title, Text } = Typography;
 
+// --- 高级 B端 色板 (Graphite & Tech Blue) ---
+const THEME = {
+  primary: '#0ea5e9',     // 科技青
+  secondary: '#64748b',   // 石墨灰
+  success: '#10b981',     // 翡翠绿
+  warning: '#f59e0b',     // 琥珀金
+  bg: '#f1f5f9',          // 极淡灰背景
+  text: '#0f172a'         // 深蓝黑字体
+};
+
+const CHART_COLORS = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ec4899'];
+
+// --- 丰富的数据源 ---
+const TREND_DATA = [
+  { name: '02-01', revenue: 4500, orders: 120, satisfaction: 85 },
+  { name: '02-02', revenue: 5200, orders: 150, satisfaction: 88 },
+  { name: '02-03', revenue: 3800, orders: 100, satisfaction: 82 },
+  { name: '02-04', revenue: 6500, orders: 220, satisfaction: 90 },
+  { name: '02-05', revenue: 4800, orders: 140, satisfaction: 86 },
+  { name: '02-06', revenue: 5900, orders: 180, satisfaction: 92 },
+  { name: '02-07', revenue: 7200, orders: 250, satisfaction: 95 },
+];
+
+const CHANNEL_DISTRIBUTION = [
+  { name: '携程分销', value: 400 },
+  { name: '美团直连', value: 300 },
+  { name: '易宿直营', value: 200 },
+  { name: '飞猪官网', value: 100 },
+];
+
+const PERFORMANCE_RADAR = [
+  { subject: '卫生', A: 120, full: 150 },
+  { subject: '服务', A: 98, full: 150 },
+  { subject: '设施', A: 86, full: 150 },
+  { subject: '性价比', A: 99, full: 150 },
+  { subject: '位置', A: 85, full: 150 },
+];
+
 const Dashboard = () => {
-  const navigate = useNavigate();
-  
-  // 获取当前登录用户信息
-  const userInfo = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_INFO) || '{}');
-  const isAdmin = userInfo.role === 'admin';
-
-  // 退出登录逻辑
- const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-    navigate(ROUTE_PATHS.LOGIN);
-  };
-
   return (
-    <div style={{ padding: '24px', background: '#f5f7fa', minHeight: '100vh' }}>
-      {/* 顶部标题栏 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <Space size="middle">
-          <DashboardOutlined style={{ fontSize: '24px', color: '#0086ff' }} />
-          <Title level={3} style={{ margin: 0 }}>工作台 ({isAdmin ? '系统管理' : '商家版'})</Title>
+    <div style={{ background: THEME.bg, minHeight: '100vh', padding: '24px' }}>
+      
+      {/* 顶部专业筛选栏 */}
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <Space size="large">
+          <Title level={4} style={{ margin: 0, color: THEME.text }}>经营数据报告</Title>
+          <Segmented 
+            options={['概要', '销售数据', '流量数据', '下载中心']} 
+            defaultValue="概要"
+            style={{ padding: '4px' }}
+          />
         </Space>
-        <Button icon={<LogoutOutlined />} onClick={handleLogout} danger>退出登录</Button>
+        <Space>
+          <Button icon={<DownloadOutlined />}>导出报告</Button>
+          <Button type="primary" icon={<FilterOutlined />}>高级筛选</Button>
+        </Space>
       </div>
 
-      {/* 欢迎语 */}
-      <Card variant="borderless" style={{ marginBottom: 24, borderRadius: 8 }}>
-        <Text strong style={{ fontSize: 18 }}>您好，{userInfo.username}！</Text>
-        <p style={{ color: '#999', marginTop: 8 }}>欢迎使用易宿 eBooking 酒店后台管理系统。您上次登录时间为：{userInfo.lastLogin}</p>
-      </Card>
-
-      {/* 数据统计栏 (携程风格统计) */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={isAdmin ? 12 : 8}>
-          <Card variant="borderless" hoverable>
-            <Statistic title={isAdmin ? "待审核申请" : "今日预订量"} value={isAdmin ? 8 : 124} valueStyle={{ color: '#0086ff' }} />
-          </Card>
-        </Col>
-        {!isAdmin && (
-          <Col span={8}>
-            <Card variant="borderless" hoverable>
-              <Statistic title="本月总营收" value={85600} prefix="￥" valueStyle={{ color: '#cf1322' }} />
+      {/* 核心指标卡片  */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        {[
+          { label: '预订订单数', value: '1,640', trend: '+12.5%', color: THEME.primary },
+          { label: '间夜量', value: '1,914', trend: '+5.2%', color: THEME.success },
+          { label: '销售额 (RMB)', value: '19.70万', trend: '+8.1%', color: THEME.text },
+          { label: '平均转化率', value: '14.2%', trend: '-1.2%', color: THEME.warning },
+        ].map((item, i) => (
+          <Col xs={24} sm={12} lg={6} key={i}>
+            <Card variant="borderless" style={{ borderRadius: 12 }}>
+              <Statistic 
+                title={<Text type="secondary">{item.label}</Text>}
+                value={item.value}
+                valueStyle={{ fontWeight: 700, color: THEME.text }}
+                suffix={<Text style={{ fontSize: 12, color: item.trend.startsWith('+') ? '#10b981' : '#ef4444' }}>{item.trend}</Text>}
+              />
+              <div style={{ marginTop: 12 }}>
+                <Progress 
+                  percent={70 + i * 5} 
+                  size={['100%', 6]} 
+                  showInfo={false} 
+                  strokeColor={item.color} 
+                />
+              </div>
             </Card>
           </Col>
-        )}
-        <Col span={isAdmin ? 12 : 8}>
-          <Card bordered={false} hoverable>
-            <Statistic title={isAdmin ? "在线酒店总数" : "当前酒店评分"} value={isAdmin ? 1542 : 4.8} suffix={!isAdmin && "/ 5.0"} />
+        ))}
+      </Row>
+
+      <Row gutter={[16, 16]}>
+        {/* 左侧：复合趋势分析 (折线 + 柱状) */}
+        <Col xs={24} xl={16}>
+          <Card 
+            title="多维业务趋势" 
+            variant="borderless" 
+            style={{ borderRadius: 12 }}
+            extra={<Segmented options={['实时', '按日', '按周', '按月']} defaultValue="按日" />}
+          >
+            {/* 设定了具体高度的容器*/}
+            <div style={{ width: '100%', height: 400, minHeight: 400 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={TREND_DATA} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                  <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                  <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+                  <Bar dataKey="orders" name="预订量" fill={THEME.primary} radius={[4, 4, 0, 0]} barSize={24} />
+                  <Area type="monotone" dataKey="revenue" name="营收额" fill="#e0f2fe" stroke={THEME.primary} strokeWidth={2} fillOpacity={0.6} />
+                  <Line type="monotone" dataKey="satisfaction" name="满意度" stroke={THEME.success} strokeWidth={2} dot={{ r: 4, fill: '#fff', strokeWidth: 2 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
+
+        {/* 右侧：雷达图表 (专业表现分析) */}
+        <Col xs={24} xl={8}>
+          <Card title="服务表现维度" variant="borderless" style={{ borderRadius: 12, height: '100%' }}>
+            <div style={{ width: '100%', height: 400, minHeight: 400 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={PERFORMANCE_RADAR}>
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 150]} axisLine={false} tick={false} />
+                  <Radar name="当前评分" dataKey="A" stroke={THEME.primary} fill={THEME.primary} fillOpacity={0.5} />
+                  <Tooltip />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
           </Card>
         </Col>
       </Row>
 
-      <Divider orientation="left">快捷操作</Divider>
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        {/* 底部左侧：渠道占比 (高级环形图) */}
+        <Col xs={24} lg={8}>
+          <Card title="流量获取渠道" variant="borderless" style={{ borderRadius: 12 }}>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={CHANNEL_DISTRIBUTION}
+                    innerRadius={70}
+                    outerRadius={90}
+                    paddingAngle={8}
+                    dataKey="value"
+                  >
+                    {CHANNEL_DISTRIBUTION.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend layout="horizontal" verticalAlign="bottom" align="center" iconType="circle" />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </Col>
 
-      {/* 核心功能区分 */}
-      <Row gutter={24}>
-        {isAdmin ? (
-          // 管理员专属功能
-          <>
-            <Col span={12}>
-              <Card 
-                hoverable 
-                onClick={() => navigate(ROUTE_PATHS.HOTEL_AUDIT)}
-                cover={<div style={{ height: 120, background: '#e6f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <AuditOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-                </div>}
-              >
-                <Card.Meta title="酒店审核中心" description="查看并处理商家提交的酒店录入申请，进行发布或驳回操作。" />
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card 
-                hoverable 
-                cover={<div style={{ height: 120, background: '#f9f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <LineChartOutlined style={{ fontSize: 48, color: '#722ed1' }} />
-                </div>}
-              >
-                <Card.Meta title="全站运营分析" description="监控平台流量、交易数据及商户活跃度。" />
-              </Card>
-            </Col>
-          </>
-        ) : (
-          // 酒店商家专属功能
-          <>
-            <Col span={12}>
-              <Card 
-                hoverable 
-                onClick={() => navigate(ROUTE_PATHS.HOTEL_EDIT)}
-                cover={<div style={{ height: 120, background: '#f6ffed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CloudUploadOutlined style={{ fontSize: 48, color: '#52c41a' }} />
-                </div>}
-              >
-                <Card.Meta title="房源录入/编辑" description="上传酒店图片、描述，设置房型价格并提交审核。" />
-              </Card>
-            </Col>
-            <Col span={12}>
-              <Card 
-                hoverable 
-                cover={<div style={{ height: 120, background: '#fff7e6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <HomeOutlined style={{ fontSize: 48, color: '#fa8c16' }} />
-                </div>}
-              >
-                <Card.Meta title="我的酒店管理" description="查看已发布的酒店状态，调整房态及库存信息。" />
-              </Card>
-            </Col>
-          </>
-        )}
+        {/* 底部中间：实时服务监控 */}
+        <Col xs={24} lg={8}>
+          <Card title="平台服务健康度" variant="borderless" style={{ borderRadius: 12 }}>
+             <Space direction="vertical" style={{ width: '100%' }} size={24}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>API 响应可用性</Text>
+                    <Text strong style={{ color: THEME.success }}>99.98%</Text>
+                  </div>
+                  <Progress percent={99.9} showInfo={false} status="active" strokeColor={THEME.success} size={[, 8]} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>商家平均响应时效</Text>
+                    <Text strong>1.2h / 2h</Text>
+                  </div>
+                  <Progress percent={85} showInfo={false} strokeColor={THEME.primary} size={[, 8]} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>用户纠纷处理率</Text>
+                    <Text strong>92%</Text>
+                  </div>
+                  <Progress percent={92} showInfo={false} strokeColor={THEME.warning} size={[, 8]} />
+                </div>
+             </Space>
+          </Card>
+        </Col>
+
+        {/* 底部右侧：动态预警  */}
+        <Col xs={24} lg={8}>
+          <Card title="异常与动态预警" variant="borderless" style={{ borderRadius: 12 }}>
+            <List
+              split={false}
+              dataSource={[
+                { title: '库存预警：大床房余量 < 2', type: 'error', time: '3分钟前' },
+                { title: '新审核申请：静安希尔顿酒店', type: 'processing', time: '12分钟前' },
+                { title: '系统更新：V2.4 版本已上线', type: 'success', time: '1小时前' },
+                { title: '结算通知：1月账单已生成', type: 'warning', time: '2小时前' },
+              ]}
+              renderItem={item => (
+                <List.Item style={{ padding: '12px 0' }}>
+                  <Space align="start">
+                    <Badge status={item.type} style={{ marginTop: 8 }} />
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <Text style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>{item.time}</Text>
+                    </div>
+                  </Space>
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
       </Row>
     </div>
   );
