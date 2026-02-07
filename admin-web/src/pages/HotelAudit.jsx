@@ -44,19 +44,22 @@ const HotelAudit = () => {
 
   // 2. 获取酒店详情（含房型）
   const handleShowDetail = async (record) => {
-    setSelectedHotel(record);
-    setIsModalOpen(true);
-    try {
-      const res = await request.get(`/hotel/detail/${record.id}`);
-      if (res.success && res.data) {
-        // 根据 models/index.js 中的 as: 'roomTypes' 取值
-        setRoomTypes(res.data.roomTypes || []);
-      }
-    } catch (error) {
-      console.error("获取详情失败:", error);
-      message.error('无法获取酒店房型信息');
+  setSelectedHotel(record);
+  setIsModalOpen(true);
+  try {
+    const res = await request.get(`/hotel/detail/${record.id}`);
+    
+    if (res.code === 200 && res.data) {
+      setRoomTypes(res.data.roomTypes || []);
+    } else {
+      setRoomTypes([]);
+      console.warn('获取房型失败或数据为空:', res.msg);
     }
-  };
+  } catch (error) {
+    console.error('获取详情异常:', error);
+    message.error('无法获取酒店房型信息');
+  }
+};
 
   // 3. 更改状态逻辑（通过/驳回/下线/恢复）
   const handleStatusChange = async (id, newStatus, reason = '') => {

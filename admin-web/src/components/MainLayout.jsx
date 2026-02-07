@@ -31,7 +31,15 @@ const MainLayout = () => {
     { type: 'group', label: '核心业务', children: [
       { key: ROUTE_PATHS.DASHBOARD, icon: <DesktopOutlined />, label: '经营看板' },
       ...(role === 'admin' ? [{ key: ROUTE_PATHS.HOTEL_AUDIT, icon: <FileSearchOutlined />, label: '酒店审核' }] : []),
-      ...(role === 'merchant' ? [{ key: ROUTE_PATHS.HOTEL_EDIT, icon: <EditOutlined />, label: '房源编辑' }] : []),
+      ...(role === 
+'merchant'
+ ? [
+      { 
+key: ROUTE_PATHS.HOTEL_EDIT, icon: <EditOutlined />, label: '房源录入'
+ },
+      { 
+key: '/hotel/status', icon: <FileSearchOutlined />, label: '房源状态' } // 新增入口
+    ] : []),
     ]},
     { type: 'group', label: '数据报表', children: [
       { key: 'report_1', icon: <RiseOutlined />, label: '营收统计' },

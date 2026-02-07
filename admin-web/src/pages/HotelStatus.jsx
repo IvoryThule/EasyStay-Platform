@@ -11,18 +11,24 @@ const HotelStatus = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const fetchMyHotels = async () => {
-    setLoading(true);
-    try {
-      // 假设后端接口返回当前商家的酒店列表
-      const res = await request.get('/hotel/my'); 
-      setList(Array.isArray(res.data) ? res.data : []);
-    } catch (error) {
-      message.error('获取酒店列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
+ 
+const fetchMyHotels = async () => {
+  setLoading(true);
+  try {
+    // 传入 my_hotel=true，后端 list 函数会自动根据 req.user.id 过滤
+    const res = await request.get('/hotel/list', { 
+      params: { my_hotel: 'true' } 
+    }); 
+    
+    // 根据后端 success 包装类的结构取值
+    const data = res.data?.list || res.data || [];
+    setList(data);
+  } catch (error) {
+    message.error('获取酒店列表失败');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => { fetchMyHotels(); }, []);
 
