@@ -454,7 +454,13 @@ const handleSelectSort = (val) => {
             <HotelCard 
               key={hotel.id} 
               data={hotel} 
-              onClick={() => console.log('点击详情', hotel.id)} 
+              onClick={() => {
+                console.log('点击详情', hotel.id);
+                // 跳转到详情页，携带酒店 ID
+                Taro.navigateTo({
+                  url: `/pages/detail/index?id=${hotel.id}`
+                });
+              }}
             />
           ))}
 
