@@ -1,4 +1,4 @@
-﻿{
+{
   "_comment": "[依赖] react, react-dom, antd, axios, react-router-dom",
   "name": "easystay-admin-web",
   "private": true,
@@ -11,12 +11,13 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@ant-design/icons": "^5.2.0",
+    "antd": "^5.12.0",
+    "axios": "^1.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
-    "axios": "^1.6.2",
-    "antd": "^5.12.0",
-    "@ant-design/icons": "^5.2.0"
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",

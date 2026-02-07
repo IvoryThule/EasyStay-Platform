@@ -180,7 +180,47 @@
     }
     ```
 
-### 2.6 添加房型 (Add RoomType)
+### 2.6 获取酒店房型列表
+*   **URL**: `/hotel/roomtype/list`
+*   **Method**: `GET`
+*   **Query Params**:
+    *   `hotel_id`: 酒店ID (必填)
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "success",
+      "data": [
+        { "id": 101, "hotel_id": 1, "name": "Standard Room", "price": "800.00", "stock": 10 },
+        { "id": 102, "hotel_id": 1, "name": "Deluxe Room", "price": "1200.00", "stock": 5 }
+      ]
+    }
+    ```
+
+### 2.7 获取房型详情
+*   **URL**: `/hotel/roomtype/detail/:id`
+*   **Method**: `GET`
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "success",
+      "data": {
+        "id": 101,
+        "name": "Standard Room",
+        "price": "800.00",
+        "stock": 10,
+        "hotel": {
+          "id": 1,
+          "name": "Hilton Shanghai",
+          "address": "No. 123, Road ABC",
+          "city": "Shanghai"
+        }
+      }
+    }
+    ```
+
+### 2.8 添加房型 (Add RoomType)
 *   **URL**: `/hotel/roomtype/add`
 *   **Method**: `POST`
 *   **Headers**: `Authorization: Bearer <token>`
@@ -202,7 +242,7 @@
     }
     ```
 
-### 2.7 更新房型 (Update RoomType)
+### 2.9 更新房型 (Update RoomType)
 *   **URL**: `/hotel/roomtype/update`
 *   **Method**: `POST`
 *   **Body**:
@@ -222,7 +262,7 @@
     }
     ```
 
-### 2.8 删除房型 (Delete RoomType)
+### 2.10 删除房型 (Delete RoomType)
 *   **URL**: `/hotel/roomtype/delete`
 *   **Method**: `POST`
 *   **Body**:
@@ -334,14 +374,135 @@
     }
     ```
 
-### 4.3 支付订单 (模拟)
+### 4.3 订单详情 (需 Login)
+*   **URL**: `/order/detail/:orderId`
+*   **Method**: `GET`
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "success",
+      "data": {
+        "id": 55,
+        "status": 0,
+        "check_in": "2026-02-14",
+        "check_out": "2026-02-15",
+        "Hotel": {
+          "id": 1,
+          "name": "Hilton Shanghai",
+          "address": "No. 123, Road ABC",
+          "city": "Shanghai",
+          "cover_image": "/uploads/xxxx.jpg",
+          "star": 5
+        },
+        "RoomType": {
+          "id": 101,
+          "name": "豪华大床房",
+          "price": "399.00"
+        }
+      }
+    }
+    ```
+
+### 4.4 支付订单 (模拟)
 *   **URL**: `/order/pay`
 *   **Method**: `POST`
 *   **Body**: `{"orderId": 55}`
 *   **Response**: 200 OK (状态变更为 1)
 
-### 4.4 取消订单
+### 4.5 取消订单
 *   **URL**: `/order/cancel`
 *   **Method**: `POST`
 *   **Body**: `{"orderId": 55}`
 *   **Response**: 200 OK (状态变更为 2，且自动恢复库存)
+
+## 5. 管理员 (Admin)
+
+### 5.1 审核酒店
+*   **URL**: `/admin/hotel/audit`
+*   **Method**: `POST`
+*   **Headers**: `Authorization: Bearer <token>` (需 admin 角色)
+*   **Body**:
+    ```json
+    {
+      "hotel_id": 1,
+      "status": 1, // 1=通过发布, 2=驳回
+      "reject_reason": "酒店图片不清晰，请重新上传" // 仅 status=2 时必填
+    }
+    ```
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "Hotel approved and published successfully", // 或 "Hotel rejected"
+      "data": {
+        "id": 1,
+        "status": 1,
+        "reject_reason": null
+        // ...
+      }
+    }
+    ```
+
+### 5.2 获取待审核酒店列表 (含房型)
+*   **URL**: `/admin/hotel/pending`
+*   **Method**: `GET`
+*   **Headers**: `Authorization: Bearer <token>`
+*   **Query Params**:
+    *   `page`: 页码 (默认 1)
+    *   `limit`: 每页数量 (默认 10)
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "success",
+      "data": {
+        "total": 3,
+        "page": 1,
+        "limit": 10,
+        "list": [
+          {
+            "id": 1,
+            "name": "Hilton Shanghai",
+            "status": 0,
+            "merchant": {
+              "id": 2,
+              "username": "hotel_boss"
+            },
+            "roomTypes": [
+              { "id": 101, "name": "Standard Room", "price": "800.00", "stock": 10 }
+            ]
+            // ...
+          }
+        ]
+      }
+    }
+    ```
+
+### 5.3 获取被驳回的酒店列表
+*   **URL**: `/admin/hotel/rejected`
+*   **Method**: `GET`
+*   **Headers**: `Authorization: Bearer <token>`
+*   **Query Params**: `page`, `limit`
+*   **Response**: 类似 5.2，但返回 status=2 的酒店，包含 `reject_reason` 字段
+
+### 5.4 平台统计数据
+*   **URL**: `/admin/stats`
+*   **Method**: `GET`
+*   **Headers**: `Authorization: Bearer <token>`
+*   **Response**:
+    ```json
+    {
+      "code": 200,
+      "msg": "success",
+      "data": {
+        "users": 150,
+        "merchants": 25,
+        "hotels": 80,
+        "pendingHotels": 5,
+        "orders": 320,
+        "paidOrders": 280
+      }
+    }
+    ```
+

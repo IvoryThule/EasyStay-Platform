@@ -12,6 +12,9 @@ router.post('/create', orderController.createOrder);
 // 订单列表
 router.get('/list', orderController.getUserOrders);
 
+// 订单详情
+router.get('/detail/:orderId', orderController.getOrderDetail);
+
 // 取消订单
 router.post('/cancel', orderController.cancelOrder);
 

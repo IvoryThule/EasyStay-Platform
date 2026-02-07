@@ -24,7 +24,7 @@ pids/
 # ===============================
 tmp/
 temp/
-dist/
+# dist/  不再忽略dist
 build/
 .cache/
 *.tsbuildinfo

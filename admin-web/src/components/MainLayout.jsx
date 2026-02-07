@@ -1,12 +1,15 @@
 ﻿// components/MainLayout.jsx
 import React from 'react';
-import { Layout, Menu, Button, message } from 'antd';
+import { Layout, Menu, Button, message, Typography, Space, Divider } from 'antd';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LogoutOutlined, DesktopOutlined, FileSearchOutlined, EditOutlined } from '@ant-design/icons';
+import { 
+  LogoutOutlined, DesktopOutlined, FileSearchOutlined, 
+  EditOutlined, RiseOutlined, SettingOutlined, UserOutlined 
+} from '@ant-design/icons';
 import { ROUTE_PATHS, STORAGE_KEYS } from '../utils/constants';
 
 const { Header, Sider, Content } = Layout;
-
+const { Text } = Typography;
 const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,30 +28,34 @@ const MainLayout = () => {
 
   // 3. 根据角色定义菜单项
   const menuItems = [
-    {
-      key: ROUTE_PATHS.DASHBOARD,
-      icon: <DesktopOutlined />,
-      label: '仪表盘',
-    },
-    // 管理员独有菜单
-    ...(role === 'admin' ? [{
-      key: ROUTE_PATHS.HOTEL_AUDIT,
-      icon: <FileSearchOutlined />,
-      label: '酒店审核',
-    }] : []),
-    // 商家独有菜单
-    ...(role === 'merchant' ? [{
-      key: ROUTE_PATHS.HOTEL_EDIT,
-      icon: <EditOutlined />,
-      label: '房源编辑',
-    }] : []),
+    { type: 'group', label: '核心业务', children: [
+      { key: ROUTE_PATHS.DASHBOARD, icon: <DesktopOutlined />, label: '经营看板' },
+      ...(role === 'admin' ? [{ key: ROUTE_PATHS.HOTEL_AUDIT, icon: <FileSearchOutlined />, label: '酒店审核' }] : []),
+      ...(role === 
+'merchant'
+ ? [
+      { 
+key: ROUTE_PATHS.HOTEL_EDIT, icon: <EditOutlined />, label: '房源录入'
+ },
+      { 
+key: '/hotel/status', icon: <FileSearchOutlined />, label: '房源状态' } // 新增入口
+    ] : []),
+    ]},
+    { type: 'group', label: '数据报表', children: [
+      { key: 'report_1', icon: <RiseOutlined />, label: '营收统计' },
+    ]},
+    { type: 'group', label: '系统管理', children: [
+      { key: 'user_center', icon: <UserOutlined />, label: '个人中心' },
+      { key: 'setting', icon: <SettingOutlined />, label: '系统设置' },
+    ]}
   ];
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider breakpoint="lg" collapsedWidth="0">
-        <div className="logo" style={{ height: 32, margin: 16, background: 'rgba(255,255,255,0.2)', color: '#fff', textAlign: 'center', lineHeight: '32px' }}>
-          易宿管理系统
+      <Sider width={240} theme="dark" breakpoint="lg" collapsedWidth="0">
+        <div style={{ height: 64, margin: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#002140', borderRadius: '8px' }}>
+          <RiseOutlined style={{ color: '#1890ff', fontSize: 24, marginRight: 8 }} />
+          <span style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>易宿 eBooking</span>
         </div>
         <Menu
           theme="dark"
@@ -59,18 +66,15 @@ const MainLayout = () => {
         />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>欢迎您，{userInfo.username} ({role === 'admin' ? '管理员' : '合作伙伴'})</span>
-          <Button 
-            type="link" 
-            icon={<LogoutOutlined />} 
-            onClick={handleLogout}
-          >
-            退出登录
-          </Button>
+        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <Text strong>当前模块：{menuItems.flatMap(g => g.children).find(i => i?.key === location.pathname)?.label || '概览'}</Text>
+          <Space>
+            <Text type="secondary">欢迎，{userInfo.username} ({role === 'admin' ? '总管' : '合作伙伴'})</Text>
+            <Divider type="vertical" />
+            <Button type="link" danger icon={<LogoutOutlined />} onClick={handleLogout}>退出</Button>
+          </Space>
         </Header>
-        <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', minHeight: 280 }}>
-          {/* 这里渲染子路由页面，如 HotelAudit 或 HotelEdit */}
+        <Content style={{ margin: '24px', overflow: 'initial' }}>
           <Outlet />
         </Content>
       </Layout>

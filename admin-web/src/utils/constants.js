@@ -14,5 +14,6 @@ export const ROUTE_PATHS = {
   DASHBOARD: '/dashboard',
   HOTEL_AUDIT: '/hotel-audit',
   HOTEL_EDIT: '/hotel-edit',
+  HOTEL_STATUS: '/hotel-status', // 商家查看列表
   REGISTER: '/register'
 };

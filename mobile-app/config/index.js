@@ -48,7 +48,11 @@ export default defineConfig(async (merge, { command, mode }) => {
       },
     },
     h5: {
-      publicPath: '/',
+      publicPath: '/mobile/',
+      router: {
+        mode: 'browser',    // 或 'hash'
+        basename: '/mobile'
+      },
       staticDirectory: 'static',
       output: {
         filename: 'js/[name].[hash:8].js',
@@ -83,7 +87,7 @@ export default defineConfig(async (merge, { command, mode }) => {
       }
     }
   }
-  process.env.BROWSERSLIST_ENV = process.env.NODE_ENV
+  // process.env.BROWSERSLIST_ENV = process.env.NODE_ENV
   if (process.env.NODE_ENV === 'development') {
     // 本地开发构建配置（不混淆压缩）
     return merge({}, baseConfig, devConfig)
