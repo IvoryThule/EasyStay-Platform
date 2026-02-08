@@ -20,22 +20,35 @@ const HotelDetail = () => {
     nightCount: 1
   });
 
-  // 【修复】iOS 日期兼容性处理函数
+  // 【核心修复】更加健壮的日期计算函数
   const calculateNights = (start, end) => {
-    if (!start || !end) return 1;
     const currentYear = new Date().getFullYear();
+    const todayStr = `${currentYear}/${new Date().getMonth() + 1}/${new Date().getDate()}`;
 
-    // 将 "2月7日" 转换成 "2026/02/07" (iOS 必须格式)
     const formatToStandard = (dateStr) => {
-      const cleanStr = dateStr.replace('月', '/').replace('日', '').trim();
-      const [m, d] = cleanStr.split('/');
-      return `${currentYear}/${m.padStart(2, '0')}/${d.padStart(2, '0')}`;
+      // 1. 防御：如果 dateStr 是 undefined 或不是字符串，返回今天
+      if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('月')) {
+        return todayStr;
+      }
+
+      try {
+        const cleanStr = dateStr.replace('月', '/').replace('日', '').trim();
+        const parts = cleanStr.split('/');
+        
+        // 2. 防御：确保 split 后的结果符合预期
+        if (parts.length < 2) return todayStr;
+
+        const m = parts[0].padStart(2, '0');
+        const d = parts[1].padStart(2, '0');
+        return `${currentYear}/${m}/${d}`;
+      } catch (e) {
+        return todayStr;
+      }
     };
 
     const sDate = new Date(formatToStandard(start));
     const eDate = new Date(formatToStandard(end));
 
-    // 如果转换失败，防止崩溃
     if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) return 1;
 
     const diff = Math.ceil((eDate - sDate) / (1000 * 60 * 60 * 24));
@@ -43,28 +56,29 @@ const HotelDetail = () => {
   };
 
   useEffect(() => {
+    // 获取参数
     const { id, checkIn, checkOut } = router.params;
     
-    // 【修改】初始化日期：优先使用传参，没有则设为默认
-    if (checkIn && checkOut) {
-      setDateRange({
-        checkIn: decodeURIComponent(checkIn),
-        checkOut: decodeURIComponent(checkOut),
-        nightCount: calculateNights(checkIn, checkOut)
-      });
-    }
+    // 初始化日期逻辑：带默认值兜底
+    const cIn = checkIn ? decodeURIComponent(checkIn) : '2月7日';
+    const cOut = checkOut ? decodeURIComponent(checkOut) : '2月8日';
+    
+    setDateRange({
+      checkIn: cIn,
+      checkOut: cOut,
+      nightCount: calculateNights(cIn, cOut)
+    });
 
-    if (id) {
-      fetchHotelDetail(id);
-    }
+    // 获取酒店数据
+    const hotelId = id || '0-0'; // 兜底 ID
+    fetchHotelDetail(hotelId);
   }, [router.params]);
 
-
-  // 【新增】选择日期后的回调
   const onSelectDate = (param) => {
     const [start, end] = param;
-    const checkIn = `${start[1]}月${start[2]}日`;
-    const checkOut = `${end[1]}月${end[2]}日`;
+    // NutUI 返回的是数组 ["2026", "02", "07"]
+    const checkIn = `${parseInt(start[1])}月${parseInt(start[2])}日`;
+    const checkOut = `${parseInt(end[1])}月${parseInt(end[2])}日`;
     
     setDateRange({
       checkIn,
@@ -72,7 +86,6 @@ const HotelDetail = () => {
       nightCount: calculateNights(checkIn, checkOut)
     });
     setIsVisible(false);
-    // 这里后续可以重新调用 fetchHotelDetail(id) 以根据新日期获取新价格
   };
 
   // 模拟 API 请求函数
@@ -117,8 +130,25 @@ const HotelDetail = () => {
     }
   };
 
-  const handleBack = () => Taro.navigateBack();
-
+  const handleBack = () => {
+  const pages = Taro.getCurrentPages(); // 获取当前页面栈
+  
+  if (pages.length > 1) {
+    // 如果页面栈大于 1，说明有上一页，正常回退
+    Taro.navigateBack();
+  } else {
+    // 如果是直接刷新进入的，没有上一页，则强制跳转回列表页
+    // 注意：如果你的 list 页面在 tabBar 中，请使用 switchTab
+    Taro.switchTab({
+      url: '/pages/list/index' 
+    }).catch(() => {
+      // 如果 list 不是 tabBar 页面，则使用 reLaunch 或 navigateTo
+      Taro.reLaunch({
+        url: '/pages/list/index'
+      });
+    });
+  }
+};
   if (loading) {
     return (
       <View className='loading-container'>
@@ -131,6 +161,7 @@ const HotelDetail = () => {
     <View className='detail-page'>
       {/* 1. 顶部导航 */}
       <View className='custom-nav'>
+        <View className='back-icon' onClick={handleBack}>←</View>
         <Text className='nav-title'>{hotelInfo?.name}</Text>
       </View>
 
