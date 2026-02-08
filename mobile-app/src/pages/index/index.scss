@@ -44,25 +44,14 @@ $font-weight-medium: 500;
 $font-weight-semibold: 600;
 $font-weight-bold: 700;
 
-// 动画定义
+// --- 动画 ---
 @keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
-
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes spin {
@@ -83,6 +72,42 @@ $font-weight-bold: 700;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+// --- 【新增】顶部栏 Top Bar ---
+.custom-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  padding-top: env(safe-area-inset-top);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  .navbar-content {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+
+    .nav-left, .nav-right {
+      width: 80px;
+      display: flex;
+      align-items: center;
+      font-size: 44px;
+      color: $text-primary;
+    }
+
+    .nav-title {
+      flex: 1;
+      text-align: center;
+      font-size: $font-size-xl;
+      font-weight: $font-weight-bold;
+      color: $text-primary;
+    }
+  }
+}
+
 // 主内容区域
 .main-content {
   width: 100%;
@@ -100,7 +125,7 @@ $font-weight-bold: 700;
 // 横幅轮播 - 调整位置，确保不被覆盖，文字上移
 .banner-swiper {
   width: 100%;
-  height: 280px;
+  height: 300px;
   margin-bottom: 0; // 移除底部间距
   
   .banner-item {
@@ -191,80 +216,62 @@ $font-weight-bold: 700;
     animation: slideUp 0.5s ease-out forwards;
     display: flex;
     flex-direction: column;
-    gap: 40px; // 参照HTML中的space-y-5
+    gap: 20px; // 参照HTML中的space-y-5
     
     .search-row {
-      padding-bottom: 16px; // 参照HTML中的pb-4
-      border-bottom: 1px solid $border-light;
-      
-      &:last-of-type {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
+      padding: 10px 6px; // 对应 pb-4 的缩放
+      border-bottom: 1px solid #f3f4f6; // border-gray-100
       
       &.location-row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        padding-left: 25px; 
-        .location-select {
-          flex: 1;
+        justify-content: space-between; // 左右分布
+        
+        .location-left {
           display: flex;
           align-items: center;
-          gap: 12px; // 参照HTML中的space-x-3
-            
+          gap: 12px; // space-x-3
+          
           .location-icon {
-            font-size: 33px; // 参照HTML中的text-2xl
-            color: $primary-color;
+            font-size: 40px; 
+            color: #2563eb; // text-blue-600
           }
           
-          .location-info {
-            flex: 1;
-            
-            .location-label {
-              display: block;
-              font-size: $font-size-sm; // 放大
-              color: $text-light;
-              text-transform: uppercase;
-              letter-spacing: 0.05em; // 参照HTML中的tracking-wider
-              margin-bottom: 2px;
-            }
-            
-            .location-value {
-              font-size: $font-size-xl; // 参照HTML中的text-lg
-              font-weight: $font-weight-semibold; // 参照HTML中的font-semibold
-              color: $text-primary;
-            }
-          }
-          
-          .arrow-icon {
-            font-size: $font-size-lg;
-            color: $text-light;
-            margin-left: 4px;
+          .location-value {
+            font-size: 36px; // text-lg
+            font-weight: 600; // font-semibold
+            color: #1f2937; // text-gray-800
           }
         }
         
         .location-btn {
-          background: none;
-          border: none;
-          padding: 0;
-          font-size: $font-size-base; // 放大
-          color: $primary-color;
-          font-weight: $font-weight-medium; // 参照HTML中的font-medium
           display: flex;
           align-items: center;
-          gap: 2px; // 参照HTML中的mr-1
-            
+          color: #3b82f6; // text-blue-500
+          
+          // 彻底重置可能存在的样式
+          background: transparent;
+          margin: 0;
+          padding: 0;
+          line-height: 1;
+
           .btn-icon {
-            font-size: $font-size-base;
+            font-size: 28px;
+            margin-right: 4px; // mr-1
           }
           
           .btn-text {
-            font-size: $font-size-base;
-            font-weight: $font-weight-medium;
+            font-size: 28px; // text-sm
+            font-weight: 500; // font-medium
+          }
+
+          // 增加点击态反馈
+          &:active {
+            opacity: 0.6;
           }
         }
       }
+
       
       &.date-row {
         display: flex;
@@ -325,15 +332,19 @@ $font-weight-bold: 700;
         display: flex;
         align-items: center;
         gap: 12px; // 参照HTML中的space-x-3
+        padding: 10px 0; // 增加一点内边距，让输入区域更宽裕
         
         .search-icon {
-          font-size: 24px; // 放大
+          font-size: 30px; // 放大
           color: $text-light;
+          display: flex; // 【新增】让图标本身也开启 flex，解决字体偏移
+          align-items: center;
+          line-height: 1;
         }
         
         .search-input {
           flex: 1;
-          font-size: $font-size-base; // 放大
+          font-size: $font-size-lg; // 放大
           color: $text-primary;
           background: none;
           border: none;
@@ -361,54 +372,57 @@ $font-weight-bold: 700;
         }
       }
       
-// 搜索区域内部
-&.filter-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px 0; // 增加上下内边距
-  cursor: pointer;
+      // 搜索区域内部
+      &.filter-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 5px 0; // 保持与位置行一致的间距
 
-  .filter-content {
-    display: flex;
-    align-items: center;
-    gap: 16px; // 对应 $font-size-sm 级别的间距
-    flex: 1;
+          .filter-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
 
-    .filter-icon {
-      font-size: 32px; // 放大图标，保持与位置图标一致
-      color: $primary-color; // 改为蓝色系更醒目
-    }
+            .filter-icon {
+              font-size: 40px; // 与位置图标大小一致
+              color: #2563eb;
+            }
 
-    .filter-info {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+            .filter-info {
+              display: flex;
+              flex-direction: column;
 
-      .filter-label {
-        font-size: $font-size-sm; // 20px
-        color: $text-light;
-        text-transform: uppercase;
-      }
+              .filter-label {
+                display: block;
+                font-size: 24px !important; // 【关键】强制缩小上层标签文字
+                color: #9ca3af; 
+                margin-bottom: 2px;
+                line-height: 1.2;
+              }
 
-      .filter-value {
-        font-size: $font-size-base; // 24px
-        color: $text-primary;
-        font-weight: $font-weight-medium;
-        // 增加单行截断，防止筛选条件过多撑破容器
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 400px; 
-      }
-    }
-  }
+              .filter-value {
+                display: block;
+                font-size: 32px !important; // 【关键】强制缩小数值文字，确保不比位置行大
+                font-weight: 600;
+                color: #1f2937;
+                line-height: 1.4;
 
-        .filter-arrow {
-            font-size: $font-size-lg;
-            color: $border-color;
+                &.placeholder {
+                  color: #9ca3af;
+                  font-weight: normal;
+                }
+              }
+            }
+          }
+
+          .arrow-icon {
+            font-size: 36px;
+            color: #d1d5db;
+          }
         }
-}
+
       
       // 房间数量样式（入住人数已删除）
       &.rooms-row {
@@ -417,8 +431,8 @@ $font-weight-bold: 700;
         justify-content: space-between;
         
         .rooms-label {
-          font-size: 30px; // 放大
-          color: rgba(0, 0, 0, 0.913);
+          font-size: 32px; // 放大
+          color: $text-secondary;
           text-transform: uppercase;
         }
         
@@ -682,7 +696,7 @@ $font-weight-bold: 700;
         font-size: $font-size-base; // 放大
         color: #FFFFFF;
         background-color: $primary-color;
-        padding: 6px 12px; // 增加内边距
+        padding: 2px 12px; // 增加内边距
         border-radius: $radius-full;
       }
     }
@@ -934,6 +948,10 @@ $font-weight-bold: 700;
 .filter-popup-content {
   background-color: $bg-white;
   padding: 30px;
+  /* 确保容器不会被挤压 */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 
   .popup-header {
     display: flex;
@@ -1001,28 +1019,50 @@ $font-weight-bold: 700;
 .popup-footer {
   display: flex;
   gap: 20px;
-  padding: 40px 0 env(safe-area-inset-bottom);
+  /* env(safe-area-inset-bottom) 处理刘海屏高度 */
+  /* 再额外增加 110px 左右的距离来避开 Tabbar */
+  padding: 40px 0 calc(env(safe-area-inset-bottom) + 110px);
 
   .reset-btn, .confirm-btn {
     flex: 1;
-    height: 110px; // 按钮增高
+    height: 90px !important; // 按钮增高
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: $radius-lg;
     font-size: 34px !important; // 按钮字体放大
     font-weight: $font-weight-bold;
+
+    /* 清除 H5 Button 默认的所有怪异样式 */
+    margin: 0; 
+    line-height: 1; 
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+
+    /* 清除 Taro Button 特有的 ::after 边框 */
+    &::after {
+      display: none;
+    }
   }
 
   .reset-btn {
-    background-color: $bg-light;
-    color: $text-secondary;
-    border: none;
-  }
+    background-color: #ffffff !important; // 背景改为纯白
+    color: $text-secondary; // 文字保持灰色，或改为 $primary-color
+    border: 4px solid #e5e7eb !important; // 【关键】增加浅灰色边框，否则白色按钮看不见
+    outline: none;
 
+    &:active {
+      background-color: #f9fafb !important; // 点击时有微弱的灰色反馈
+    }
+  }
   .confirm-btn {
     background: $primary-gradient;
     color: #fff;
     border: none;
+    outline: none;
+
+    &:active {
+      opacity: 0.9;
+    }
   }
 }

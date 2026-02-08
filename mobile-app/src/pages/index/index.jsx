@@ -323,9 +323,11 @@ export default function Index() {
   const renderPopularCities = () => {
     return (
       <View className="popular-cities">
-        <View className="section-title">
-          <Text className="title">热门城市</Text>
-          <Text className="subtitle">探索更多目的地</Text>
+        <View className="section-header"> {/* 修改：统一使用 section-header 结构 */}
+          <View className="title-group">
+            <Text className="title">热门城市</Text>
+            <Text className="subtitle">探索更多目的地</Text>
+          </View>
         </View>
         <ScrollView 
           className="cities-scroll" 
@@ -338,6 +340,7 @@ export default function Index() {
               <View 
                 key={city.id} 
                 className={`city-item ${currentCity.includes(city.name) ? 'active' : ''}`}
+                hoverClass="city-item-hover" // 【新增】增加点击反馈样式
                 onClick={() => handleCitySelect(city.name)}
               >
                 <Text className="city-name">{city.name}</Text>
@@ -349,9 +352,22 @@ export default function Index() {
       </View>
     )
   }
-
+  
   return (
     <View className="page-container">
+      {/* 自定义导航栏 */}
+      <View 
+        className="custom-navbar" 
+        style={{ 
+          paddingTop: `${statusBarHeight}px`,
+          height: `${navBarHeight}px`
+        }}
+      >
+        <View className="navbar-content">
+          <Text className="navbar-title">酒店预订</Text>
+          {/* 如果需要左侧返回键或搜索框可以加在这里 */}
+        </View>
+      </View>
       {/* 页面主要内容区域 */}
       <ScrollView 
         className="main-content"
@@ -360,15 +376,16 @@ export default function Index() {
         showScrollbar={false}
       >
         {/* 顶部横幅轮播 */}
-        <Swiper
-          className="banner-swiper"
-          indicatorColor="#999"
-          indicatorActiveColor="#3B82F6"
-          circular
-          indicatorDots
-          autoplay
-          interval={4000}
-        >
+        <View className="banner-wrapper"> {/* 【新增】外层包裹，方便控制 banner 比例和圆角 */}
+          <Swiper
+            className="banner-swiper"
+            indicatorColor="rgba(255,255,255,0.6)" // 【修改】配合背景色调优指示器颜色
+            indicatorActiveColor="#3B82F6"
+            circular
+            indicatorDots
+            autoplay
+            interval={4000}
+          >
           <SwiperItem>
             <View 
               className="banner-item"
@@ -430,6 +447,7 @@ export default function Index() {
             </View>
           </SwiperItem>
         </Swiper>
+        </View>
 
         {/* 搜索核心区域 - 取消负margin，避免覆盖banner */}
         <View className="search-section">
@@ -437,30 +455,28 @@ export default function Index() {
             {/* 位置选择 */}
             <View className="search-row location-row">
               <View 
-                className="location-select"
+                className="location-left"
+                hoverClass="common-hover" // 【新增】
                 onClick={() => setShowCityPicker(!showCityPicker)}
               >
                 <Text className="location-icon">📍</Text>
-                <View className="location-info">
-                  <Text className="location-label">目的地</Text>
-                  <Text className="location-value">{searchParams.city}</Text>
-                </View>
-                <Text className="arrow-icon">›</Text>
+                <Text className="location-value">{searchParams.city}</Text>
               </View>
               
-              <Button 
+              <View 
                 className="location-btn"
+                hoverClass="common-hover"
                 onClick={useMyLocation}
               >
-                <Text className="btn-icon">📍</Text>
+                <Text className="btn-icon">🎯</Text>
                 <Text className="btn-text">我的位置</Text>
-              </Button>
+              </View>
             </View>
 
             {/* 修改：点击整个 date-row 触发日历 */}
             <View className="search-row date-row" onClick={openCalendar}
-  // 增加 hover-class 方便视觉确认是否点击到
-  hoverClass="date-row-hover">
+            // 增加 hover-class 方便视觉确认是否点击到
+            hoverClass="date-row-hover">
               <View className="date-item checkin">
                 <Text className="date-label">入住日期</Text>
                 <View className="date-info">
@@ -470,7 +486,9 @@ export default function Index() {
               </View>
               
               <View className="night-count">
+                <View className="line" /> {/* 【新增】装饰线 */}
                 <Text className="night-text">{searchParams.nights}晚</Text>
+                <View className="line" />
               </View>
               
               <View 
@@ -491,7 +509,7 @@ export default function Index() {
               <Input
                 className="search-input"
                 placeholder="关键字/位置/品牌/酒店名"
-                placeholderClass="placeholder"
+                placeholderClass="placeholder-style"
                 value={searchParams.keyword}
                 onInput={(e) => setSearchParams(prev => ({
                   ...prev,
@@ -501,12 +519,9 @@ export default function Index() {
                 onConfirm={handleSearch}
               />
               {searchParams.keyword && (
-                <Text 
-                  className="clear-icon"
-                  onClick={() => setSearchParams(prev => ({ ...prev, keyword: '' }))}
-                >
-                  ✕
-                </Text>
+                <View className="clear-wrapper" onClick={() => setSearchParams(prev => ({ ...prev, keyword: '' }))}>
+                  <Text className="clear-icon">✕</Text>
+                </View>
               )}
             </View>
 
@@ -536,25 +551,27 @@ export default function Index() {
             </View>
           </View>
           
-          {/* 4. 新增：价格/星级筛选行 */}
-            <View 
-              className="search-row filter-row" 
-              onClick={() => {
-                setTempFilter({ ...filterParams })
-                setIsFilterVisible(true)
-              }}
-              hoverClass="row-hover"
-            >
-              <Text className="filter-label">价格/星级</Text>
-              <View className="filter-display">
+          {/* 筛选行 */}
+          <View 
+            className="search-row filter-row" 
+            onClick={() => {
+              setTempFilter({ ...filterParams })
+              setIsFilterVisible(true)
+            }}
+          >
+            <View className="filter-left">
+              <Text className="filter-icon">🏷️</Text> {/* 保持图标一致 */}
+              <View className="filter-info">
+                <Text className="filter-label">价格/星级</Text>
                 <Text className={`filter-value ${(filterParams.price.value === 'all' && filterParams.star.value === 'all') ? 'placeholder' : ''}`}>
                   {filterParams.price.value === 'all' && filterParams.star.value === 'all' 
                     ? '请选择价格/星级' 
                     : `${filterParams.price.label} · ${filterParams.star.label}`}
                 </Text>
-                <Text className="arrow-icon">›</Text>
               </View>
             </View>
+            <Text className="arrow-icon">›</Text>
+          </View>
 
             {/* 搜索按钮 */}
             <Button 
