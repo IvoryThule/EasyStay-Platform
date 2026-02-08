@@ -48,7 +48,11 @@ export default defineConfig(async (merge, { command, mode }) => {
       },
     },
     h5: {
-      publicPath: '/',
+      publicPath: '/mobile/',
+      router: {
+        mode: 'browser',    // 或 'hash'
+        basename: '/mobile'
+      },
       staticDirectory: 'static',
       output: {
         filename: 'js/[name].[hash:8].js',
