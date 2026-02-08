@@ -1,275 +1,169 @@
 ﻿/* [样式] 酒店列表卡片样式 */
 /* 待实现。 */
 // 变量定义 - 方便后期换肤
-$primary-color: #2563eb;    // 携程蓝/美团蓝
-$text-main: #111827;        // 主要文字
-$text-sub: #6b7280;         // 次要文字
-$bg-white: #ffffff;
-$orange: #f97316;
-$radius-lg: 16rpx;          // 卡片圆角
-$radius-md: 8rpx;           // 图片圆角
+$primary-color: #2563eb; 
+$text-main: #111827;
+$text-sub: #6b7280;
+$orange-text: #b45309;
+$orange-bg: #fff7ed;
 
 .hotel-card {
   display: flex;
-  flex-direction: row;
   padding: 24rpx;
-  background-color: $bg-white;
-  margin-bottom: 20rpx;
+  background-color: #fff;
+  margin-bottom: 24rpx;
+  border-radius: 24rpx;
   
-  // --- 关键样式：阴影与圆角调整 ---
-  border-radius: $radius-lg;
-  // 模拟 iOS 风格的弥散阴影，提升质感
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
-  // 增加 1px 极淡边框增加层次
-  border: 1px solid rgba(229, 231, 235, 0.5);
-  
-  position: relative;
-  overflow: hidden;
+  &:active { background-color: #f9fafb; }
 
-  // 点击态
-  &:active {
-    background-color: #f9fafb;
-    transform: scale(0.995);
-  }
-
-  // 左侧图片容器
+  // 左侧 28x40 比例
   &__media {
     position: relative;
-    width: 200rpx;
-    height: 280rpx;
+    width: 224rpx; // 对应 w-28 (28*8)
+    height: 320rpx; // 对应 h-40
     flex-shrink: 0;
-    margin-right: 20rpx;
-    border-radius: $radius-md;
+    margin-right: 24rpx;
+    border-radius: 20rpx;
     overflow: hidden;
     background-color: #f3f4f6;
-  }
 
-  &__img {
-    width: 100%;
-    height: 100%;
-    border-radius: $radius-md;
-  }
-
-  &__video-badge {
-    position: absolute;
-    bottom: 10rpx;
-    right: 10rpx;
-    background: rgba(0,0,0,0.4);
-    width: 40rpx;
-    height: 40rpx;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    
-    .icon-play {
-      color: #fff;
-      font-size: 20rpx;
+    .video-badge {
+      position: absolute;
+      bottom: 8rpx;
+      right: 8rpx;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4rpx 10rpx;
+      border-radius: 20rpx;
+      .icon { color: #fff; font-size: 18rpx; }
     }
   }
-  
-  &__wish-icon {
-    position: absolute;
-    top: 10rpx;
-    right: 10rpx;
-    font-size: 24rpx;
-    color: #fff;
-    text-shadow: 0 2rpx 4rpx rgba(0,0,0,0.3);
-  }
 
-  // 右侧内容容器
+  &__img { width: 100%; height: 100%; }
+
   &__content {
     flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    overflow: hidden; 
+    padding: 2rpx 0;
   }
 
-  &__header {
-    margin-bottom: 6rpx;
+  &__title-row {
+    margin-bottom: 8rpx;
+    .hotel-card__name {
+      font-size: 30rpx; // text-[15px]
+      font-weight: bold;
+      color: $text-main;
+    }
+    .hotel-card__diamonds {
+      font-size: 20rpx;
+      color: #fb923c;
+    }
   }
 
-  &__name {
-    font-size: 30rpx;
-    font-weight: 600;
-    color: $text-main;
-    line-height: 1.3;
-    margin-bottom: 4rpx;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  &__diamonds {
-    font-size: 20rpx;
-  }
-
-  // 评分行
   &__stats {
     display: flex;
     align-items: center;
     margin-bottom: 8rpx;
-
-    .score-box {
+    
+    .score-badge {
       display: flex;
-      align-items: center;
-      margin-right: 10rpx;
+      margin-right: 8rpx;
+      .score-num {
+        background: $primary-color;
+        color: #fff;
+        font-size: 20rpx;
+        font-weight: bold;
+        padding: 2rpx 8rpx;
+        border-radius: 4rpx;
+      }
+      .score-text {
+        color: $primary-color;
+        font-size: 22rpx;
+        font-weight: bold;
+        margin-left: 8rpx;
+      }
     }
-    .score-num {
-      background: $primary-color;
-      color: #fff;
-      font-size: 22rpx;
-      font-weight: bold;
-      padding: 2rpx 6rpx;
-      border-radius: 4rpx 0 0 4rpx;
-    }
-    .score-text {
-      color: $primary-color;
-      font-size: 22rpx;
-      font-weight: bold;
-      background: rgba($primary-color, 0.1);
-      padding: 2rpx 6rpx;
-      border-radius: 0 4rpx 4rpx 0;
-    }
-    .stats-text {
-      font-size: 22rpx;
-      color: $text-sub;
+    .comment-text {
+      font-size: 20rpx;
+      color: #9ca3af;
     }
   }
 
-  // 位置行
-  &__location-row {
+  &__location {
     font-size: 22rpx;
     color: $text-sub;
-    margin-bottom: 8rpx;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-bottom: 6rpx;
+    display: block;
   }
 
-  // Highlight
   &__highlight {
     font-size: 22rpx;
-    color: #854d0e; // 深棕色
-    background-color: #fefce8;
-    padding: 4rpx 8rpx;
-    border-radius: 4rpx;
-    margin-bottom: 10rpx;
-    display: flex;
-    align-items: center;
-
-    .highlight-prefix {
-      font-weight: bold;
-      margin-right: 6rpx;
-    }
-    .highlight-content {
-      flex: 1;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
+    color: $orange-text;
+    font-weight: 500;
+    margin-bottom: 12rpx;
   }
 
-  // 标签
   &__tags {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: auto; // 挤到底部
-    
+    gap: 8rpx;
+    margin-bottom: 12rpx;
+
     .tag-item {
-      border: 1rpx solid #e5e7eb;
-      padding: 2rpx 6rpx;
-      border-radius: 4rpx;
-      margin-right: 8rpx;
-      margin-bottom: 8rpx;
-
-      .tag-text {
-        font-size: 20rpx;
-        color: $text-sub;
-      }
-    }
-
-    .tag-blue {
-      border-color: rgba($primary-color, 0.3);
-      .tag-text { color: $primary-color; }
-    }
-  }
-
-  // 底部栏
-  &__footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-top: 10rpx;
-  }
-
-  .footer-left {
-    // 榜单
-    .ranking-badge {
-      display: flex;
-      align-items: center;
-      background: #fff7ed;
-      padding: 2rpx 8rpx;
-      border-radius: 6rpx;
+    display: inline-flex;    // 使用 flex 布局让对齐更精准
+    align-items: center;     // 垂直居中
+    justify-content: center; // 水平居中
+    border: 1rpx solid #e5e7eb;
+    
+    // --- 缩小高度的关键 ---
+    padding: 0 6rpx;         // 左右保留极小边距，上下设为 0
+    height: 28rpx;           // 【核心】强制固定一个极小的高度
+    line-height: 1;          // 消除默认行高干扰
+    // ----------------------
+    
+    border-radius: 4rpx;
+      .tag-text { font-size: 18rpx; color: $text-sub; }
       
-      .icon-rank { font-size: 20rpx; margin-right: 4rpx; }
-      .rank-text { font-size: 20rpx; color: $orange; font-weight: 500; }
+      &.tag-blue {
+        border-color: #bfdbfe;
+        .tag-text { color: #3b82f6; }
+      }
     }
   }
 
-  .footer-right {
+  &__ranking {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
+    background: $orange-bg;
+    padding: 4rpx 12rpx;
+    border-radius: 4rpx;
+    width: fit-content;
+    
+    .rank-icon { font-size: 20rpx; margin-right: 8rpx; }
+    .rank-text { font-size: 18rpx; color: #9a3412; }
+  }
 
-    .promo-row {
-      margin-bottom: -4rpx;
-      .promo-text {
-        font-size: 20rpx;
-        color: $primary-color;
-        font-weight: 600;
-      }
+  &__footer {
+    text-align: right;
+    margin-top: 10rpx;
+
+    .promo-text {
+      font-size: 20rpx;
+      color: $primary-color;
+      font-weight: bold;
+      margin-bottom: 4rpx;
+      display: block;
     }
 
-    .price-row {
+    .price-box {
       display: flex;
       align-items: baseline;
-    }
-
-    .price-original {
-      font-size: 20rpx;
-      color: #9ca3af;
-      text-decoration: line-through;
-      margin-right: 8rpx;
-    }
-    .currency {
-      font-size: 22rpx;
-      color: $primary-color;
-      font-weight: bold;
-    }
-    .price-main {
-      font-size: 40rpx; // 价格大字号
-      color: $primary-color;
-      font-weight: bold;
-      line-height: 1;
-      margin: 0 2rpx;
-    }
-    .suffix {
-      font-size: 20rpx;
-      color: $text-sub;
-    }
-
-    .marketing-row {
-      margin-top: 4rpx;
-      .marketing-tag {
-        font-size: 18rpx;
-        color: $orange;
-        border: 1px solid rgba($orange, 0.3);
-        padding: 0 4rpx;
-        border-radius: 4rpx;
-      }
+      justify-content: flex-end;
+      
+      .currency { font-size: 20rpx; color: $primary-color; font-weight: bold; }
+      .price { font-size: 40rpx; color: $primary-color; font-weight: bold; margin: 0 4rpx; }
+      .suffix { font-size: 20rpx; color: #9ca3af; }
     }
   }
 }
