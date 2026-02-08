@@ -4,6 +4,8 @@ import { View, Text, Image, Swiper, SwiperItem, ScrollView } from '@tarojs/compo
 import { useRouter } from '@tarojs/taro'; // 引入 useRouter 钩子
 import Taro from '@tarojs/taro';
 import { Calendar } from '@nutui/nutui-react-taro';
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
 import './index.scss';
 
 const HotelDetail = () => {
@@ -246,8 +248,8 @@ const HotelDetail = () => {
       <Calendar
         visible={isVisible}
         type="range"
-        startDate="2026-02-07" // 建议使用动态当前日期
-        endDate="2026-05-07"
+        startDate={dayjs().format('YYYY-MM-DD')}
+        endDate={dayjs().add(12, 'month').format('YYYY-MM-DD')}
         onClose={() => setIsVisible(false)}
         onConfirm={onSelectDate}
       />
