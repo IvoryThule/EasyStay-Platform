@@ -83,7 +83,7 @@ export default defineConfig(async (merge, { command, mode }) => {
       }
     }
   }
-  process.env.BROWSERSLIST_ENV = process.env.NODE_ENV
+  // process.env.BROWSERSLIST_ENV = process.env.NODE_ENV
   if (process.env.NODE_ENV === 'development') {
     // 本地开发构建配置（不混淆压缩）
     return merge({}, baseConfig, devConfig)

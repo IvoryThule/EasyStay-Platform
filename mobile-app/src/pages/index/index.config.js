@@ -16,7 +16,6 @@
   onReachBottomDistance: 50,
   
   // 微信小程序特定配置
-  usingComponents: {},
   
   // 页面组件选项
   componentGenerics: {},
