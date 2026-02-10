@@ -32,8 +32,12 @@ $orange-bg: #fff7ed;
       bottom: 8rpx;
       right: 8rpx;
       background: rgba(0, 0, 0, 0.4);
-      padding: 4rpx 10rpx;
+      padding: 2rpx 10rpx;
       border-radius: 20rpx;
+      height: 35rpx;
+      display: flex;
+      align-items: center; /* 垂直居中 */
+      justify-content: center;
       .icon { color: #fff; font-size: 18rpx; }
     }
   }

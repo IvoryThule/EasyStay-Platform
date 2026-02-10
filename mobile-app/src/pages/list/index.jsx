@@ -6,6 +6,9 @@ import { Popup } from '@nutui/nutui-react-taro'
 import HotelCard from '../../components/HotelCard' // 引入卡片组件
 import './index.scss'
 import { IoIosSearch } from "react-icons/io";
+import request from '../../utils/request'
+
+const IMAGE_HOST = 'http://1.14.207.212:8848';
 
 // 静态筛选项配置（与首页保持一致，实际可提取为常量文件）
 const PRICE_OPTIONS = [
@@ -26,10 +29,10 @@ const STAR_OPTIONS = [
 export default function HotelList() {
   // 1. 核心状态管理
   const [hotelList, setHotelList] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
-
+  
   // 搜索条件状态 (初始化时从路由获取)
   const [queryParams, setQueryParams] = useState({
     city: '上海',
@@ -46,6 +49,17 @@ export default function HotelList() {
     price: 'all',
     star: 'all'
   })
+
+  // --- 新增：价格转换逻辑 ---
+  const getPriceRange = (type) => {
+    const map = {
+      '0-150': { min: 0, max: 150 },
+      '150-300': { min: 150, max: 300 },
+      '300-600': { min: 300, max: 600 },
+      '600-up': { min: 600, max: 99999 }
+    };
+    return map[type] || { min: undefined, max: undefined };
+  };
   // 2. 页面加载：从缓存获取参数并请求数据
   // --- 修改点 1: 生命周期调整 ---
   // 将 loadSearchParams 从 useLoad 移出，放入 useDidShow
@@ -92,33 +106,69 @@ export default function HotelList() {
   }
   
   // 3. 模拟 API 请求方法
-  const fetchHotelData = (params, pageNo = 1) => {
-    setLoading(true)
-    console.log('调用API参数:', { ...params, page: pageNo })
+  
+  // --- 1. 核心数据请求方法 ---
+  const fetchHotelData = async (params, pageNo = 1, currentSort = sortType) => {
+    if (loading) return;
+    setLoading(true);
 
-    // 显示当前搜索条件
-    console.log('搜索条件:', {
-      城市: params.city,
-      关键词: params.keyword,
-      价格范围: params.priceType,
-      星级: params.starType
-    })
+    const { min, max } = getPriceRange(params.priceType);
+    // --- 新增：清洗城市名称 ---
+  // 将 "上海市" 转换为 "上海"，确保后端能匹配到
+  const cleanCity = params.city ? params.city.replace(/市$/, '') : '上海';
+    
+    // 构造符合后端 API 文档的参数
+    const apiQuery = {
+      page: pageNo,
+      limit: 10,
+      city: cleanCity
+    };
 
-    // 模拟网络延迟
-    setTimeout(() => {
-      // 模拟返回数据
-      const mockResult = generateMockData(pageNo, params)
-      
-      if (pageNo === 1) {
-        setHotelList(mockResult)
-      } else {
-        setHotelList(prev => [...prev, ...mockResult])
+    if (params.keyword) apiQuery.keyword = params.keyword;
+    if (params.starType && params.starType !== 'all') apiQuery.star = params.starType;
+    if (min !== undefined) apiQuery.min_price = min;
+    if (max !== undefined) apiQuery.max_price = max;
+    
+    // 排序逻辑映射
+    if (currentSort === 'price_low') apiQuery.sort = 'price_asc';
+    if (currentSort === 'rating') apiQuery.sort = 'price_desc'; // 假设文档中降序对应好评
+
+    try {
+      // 使用封装好的 request
+      const res = await request({
+        url: '/hotel/list',
+        method: 'GET',
+        data: apiQuery
+      });
+
+      if (res.code === 200) {
+        const { list: rawList, total } = res.data;
+        
+        // --- 2. 数据清洗与图片补全 ---
+        const formatted = rawList.map(item => ({
+          ...item,
+          imageUrl: item.cover_image?.startsWith('http') 
+                    ? item.cover_image 
+                    : `${IMAGE_HOST}${item.cover_image}`, 
+          // 确保 tags 是数组格式
+          tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
+          locationDesc: item.address,
+          score: 4.8 // 后端文档暂无评分，先写死
+        }));
+
+        if (pageNo === 1) {
+          setHotelList(formatted);
+        } else {
+          setHotelList(prev => [...prev, ...formatted]);
+        }
+        setHasMore(pageNo * 10 < total);
       }
-
-      setLoading(false)
-      setHasMore(mockResult.length === 10) // 假设每页10条
-    }, 800)
-  }
+    } catch (err) {
+      console.error('列表加载失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 生成模拟数据 (实际开发中删除此函数)
   const generateMockData = (pageNo, params) => {
@@ -140,6 +190,24 @@ export default function HotelList() {
       ranking: index === 0 ? { text: '人气榜 No.1', type: 'gold' } : null
     }))
   }
+
+  // --- 3. 生命周期统一处理 ---
+  useDidShow(() => {
+    const cachedParams = Taro.getStorageSync('hotelSearchParams');
+    if (cachedParams) {
+      const newParams = {
+        city: cachedParams.city || '上海',
+        checkInDate: cachedParams.checkInDate || '',
+        checkOutDate: cachedParams.checkOutDate || '',
+        keyword: cachedParams.keyword || '',
+        priceType: cachedParams.priceType || 'all',
+        starType: cachedParams.starType || 'all'
+      };
+      setQueryParams(newParams);
+      setPage(1); // 重置分页
+      fetchHotelData(newParams, 1); // 立即发起请求
+    }
+  });
 
   // 4. 事件处理
   // 加载更多
@@ -165,6 +233,14 @@ export default function HotelList() {
     setShowFilterPopup(false) // 关闭弹窗
     fetchHotelData(newParams, 1) // 重新请求
   }
+
+  const handleSelectSort = (val) => {
+    setSortType(val);
+    setActiveTab('');
+    setPage(1);
+    // 注意：这里要直接传入最新的 val，因为 setSortType 是异步的
+    fetchHotelData(queryParams, 1, val);
+  };
 
 
   // 返回到首页函数 - 重点新增函数
@@ -260,11 +336,7 @@ const handleTabClick = (tabName) => {
   }
 };
 
-const handleSelectSort = (val) => {
-  setSortType(val);
-  setActiveTab(''); // 关闭弹窗
-  // 这里执行你的查询逻辑：queryParams.update({ sort: val })
-};
+
 
   return (
     <View className="list-page">
