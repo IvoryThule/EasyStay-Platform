@@ -144,7 +144,7 @@ const getDetail = async (req, res) => {
         { 
           model: RoomType, 
           as: 'roomTypes', // 需在 models/index.js 确保 alias 一致
-          attributes: ['id', 'name', 'price', 'stock']
+          attributes: ['id', 'name', 'price', 'stock', 'image']
         }
       ]
     });
