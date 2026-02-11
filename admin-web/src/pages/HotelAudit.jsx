@@ -17,13 +17,13 @@ const HotelAudit = () => {
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [roomTypes, setRoomTypes] = useState([]);
   
-  const BASE_URL = 'http://localhost:3001';
+  const BASE_URL = 'http://localhost:3000';
 
   const fetchList = async () => {
     setLoading(true);
     try {
       const res = await request.get('/hotel/list');
-      const list = res.data?.list || res.data || [];
+      const list = res.data?.list || res.data?.data || res.data || [];
       setData(list);
     } catch (error) {
       message.error('加载列表失败');
@@ -37,7 +37,10 @@ const HotelAudit = () => {
   // 辅助函数：补全图片地址
   const renderImageUrl = (path) => {
     if (!path) return "https://placehold.co/200x200?text=No+Img";
-    return path.startsWith('http') ? path : `${BASE_URL}${path}`;
+    if (path.startsWith('http')) return path;
+    const normalizedPath = path.replace(/\\/g, '/');
+    const safePath = normalizedPath.startsWith('/') ? normalizedPath : `/${normalizedPath}`;
+    return `${BASE_URL}${safePath}`;
   };
 
   const handleShowDetail = async (record) => {
@@ -47,7 +50,8 @@ const HotelAudit = () => {
     try {
       const res = await request.get(`/hotel/detail/${record.id}`);
       const detailData = res.data?.data || res.data;
-    setRoomTypes(detailData.roomTypes || detailData.room_types || []);
+      const rooms = detailData.roomTypes || detailData.room_types || [];
+    setRoomTypes(rooms);
     } catch (error) {
       message.error('无法获取酒店房型信息');
     }

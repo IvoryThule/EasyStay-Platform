@@ -23,7 +23,7 @@ const HotelEdit = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   
-  const BASE_URL = 'http://localhost:3001';
+  const BASE_URL = 'http://localhost:3000';
 
   const isReadOnly = searchParams.get('readonly') === 'true' || (id && currentStatus !== 2 && currentStatus !== null);
 
@@ -98,6 +98,7 @@ const HotelEdit = () => {
         cover_image: coverImage,
         tags: tags,
         room_types: formattedRoomTypes,
+        roomTypes: formattedRoomTypes,
         status: 0 
       };
 
