@@ -44,18 +44,33 @@ const HotelAudit = () => {
   };
 
   const handleShowDetail = async (record) => {
-    setSelectedHotel(record);
-    setIsModalOpen(true);
-    setRoomTypes([]); // 重置房型
+  setSelectedHotel(record);
+  setIsModalOpen(true);
+  
+  // 从 tags 中寻找房型数据
+  const roomTag = record.tags?.find(t => t.startsWith('ROOMDATA:'));
+  
+  if (roomTag) {
+    try {
+      // 去掉前缀并解析 JSON
+      const jsonStr = roomTag.replace('ROOMDATA:', '');
+      const parsedRooms = JSON.parse(jsonStr);
+      setRoomTypes(parsedRooms);
+    } catch (e) {
+      console.error("解析房型失败", e);
+      setRoomTypes([]);
+    }
+  } else {
+    // 如果没有 ROOMDATA，尝试走原来的接口逻辑（兼容老数据）
     try {
       const res = await request.get(`/hotel/detail/${record.id}`);
       const detailData = res.data?.data || res.data;
-      const rooms = detailData.roomTypes || detailData.room_types || [];
-    setRoomTypes(rooms);
+      setRoomTypes(detailData.roomTypes || detailData.room_types || []);
     } catch (error) {
-      message.error('无法获取酒店房型信息');
+      setRoomTypes([]);
     }
-  };
+  }
+};
 
   const handleStatusChange = async (id, newStatus, reason = '') => {
     try {

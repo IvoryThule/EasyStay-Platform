@@ -85,20 +85,22 @@ const HotelEdit = () => {
         `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`
       ];
 
-      const formattedRoomTypes = (values.room_types || []).map(item => ({
-        name: item.type_name,
-        price: item.price,
-        stock: item.stock
-      }));
+      const roomTypesJson = JSON.stringify((values.room_types || []).map(item => ({
+      name: item.type_name,
+      price: item.price,
+      stock: item.stock
+    })));
 
       const payload = {
         id: id,
         ...values,
         city: Array.isArray(values.city) ? values.city[0] : values.city,
         cover_image: coverImage,
-        tags: tags,
-        room_types: formattedRoomTypes,
-        roomTypes: formattedRoomTypes,
+        tags: [
+        `EN:${values.name_en || ''}`,
+        `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
+        `ROOMDATA:${roomTypesJson}`
+        ],
         status: 0 
       };
 

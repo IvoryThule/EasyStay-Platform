@@ -34,7 +34,9 @@ const create = async (req, res) => {
       latitude,
       longitude,
       status: 0, // 默认为审核中
-      merchant_id
+      merchant_id  
+    }, {
+      include: [RoomType] // 声明包含关联模型一起创建
     });
 
     success(res, hotel, 'Hotel created successfully, awaiting audit.');
