@@ -19,6 +19,10 @@ const RoomType = sequelize.define('RoomType', {
   stock: {
     type: DataTypes.INTEGER,
     defaultValue: 10
+  },
+  image: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
   // hotel_id 会通过关联自动生成
 });
