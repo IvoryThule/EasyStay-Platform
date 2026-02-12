@@ -22,6 +22,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import './index.scss'
 import { Calendar, Popup } from '@nutui/nutui-react-taro';
+import request from '../../utils/request';
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
@@ -311,40 +312,47 @@ export default function Index() {
   }
 
   // 使用我的位置
-  const useMyLocation = () => {
-    // 获取当前位置
-    Taro.getLocation({
-      type: 'wgs84',
-      success: (res) => {
-        console.log('当前位置:', res)
+  const useMyLocation = async () => {
+    setLoading(true) // 开启加载状态
+    try {
+      // 1. 调用定位接口
+      const res = await request({
+        url: '/system/location',
+        method: 'GET'
+      })
 
+      // 2. 处理返回结果
+      if (res.code === 200 && res.data) {
+        const { city, province } = res.data
+        
+        // 优先取 city，如果没有（某些直辖市情况）取 province
+        const locationName = city || province || '上海市'
 
-
-        // 在实际项目中，这里会调用逆地理编码API获取城市信息
-        const city = '上海市' // 模拟获取到的城市
-        setCurrentCity(city)
+        // 3. 更新状态
+        setCurrentCity(locationName)
         setSearchParams(prev => ({
           ...prev,
-          city: city
+          city: locationName
         }))
 
-
-
         Taro.showToast({
-          title: '已获取当前位置',
+          title: `已定位到: ${locationName}`,
           icon: 'success',
           duration: 1500
         })
-      },
-      fail: (err) => {
-        console.error('获取位置失败:', err)
-        Taro.showToast({
-          title: '获取位置失败，请检查权限',
-          icon: 'error',
-          duration: 2000
-        })
+      } else {
+        throw new Error('定位解析失败')
       }
-    })
+    } catch (err) {
+      console.error('获取位置失败:', err)
+      // request.js 里已经处理了通用报错，这里可以补充逻辑
+      Taro.showToast({
+        title: '定位失败，请手动选择',
+        icon: 'none'
+      })
+    } finally {
+      setLoading(false) // 关闭加载状态
+    }
   }
 
   // 渲染热门城市
