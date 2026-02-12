@@ -16,18 +16,25 @@ $text-secondary: #6b7280;
   display: flex;        // 新增：变为 Flex 容器
   flex-direction: column; // 新增：垂直排列
   overflow: hidden;
-  position: relative;
 }
 
 // ==================== 顶部sticky区域 ====================
 .sticky-header {
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   background: #fff;
   z-index: 1000;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.list-scroll {
+  flex: 1;                 // 【核心】占据页面剩下的所有高度
+  min-height: 0;           // 【必填】修复 Flex 内部滚动溢出的经典 Bug
+  width: 100%;
+  overflow-y: scroll;      // 确保纵向滚动开启
+  background: #fff;
+  min-height: 0;
+  
+  // 不要在这里写 height: 100vh，否则它会超出屏幕
 }
 
 // ==================== 1. 搜索胶囊区域 ====================
@@ -831,4 +838,45 @@ $text-secondary: #6b7280;
       }
     }
   }
+}
+
+.loading-status-bar {
+  width: 100%;
+  padding: 50rpx 0 80rpx; // 增加底部间距，避免贴边
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  clear: both;
+
+  // 加载中/上滑加载的通用文字
+  .status-loading {
+    font-size: 24rpx;
+    color: #9ca3af;
+  }
+
+  // “已经到底啦” 容器
+  .no-more-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70%; // 控制横线总宽度
+
+    .no-more-text {
+      font-size: 24rpx; // 重点：字号更小，显得精致
+      color: #d1d5db;   // 颜色更淡
+      margin: 0 24rpx;  // 文字与线的间距
+      white-space: nowrap;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1rpx;
+      background-color: #f0f0f0; // 极淡的分割线
+    }
+  }
+}
+
+// 确保父容器能撑开
+.list-content {
+  padding-bottom: 40rpx;
 }

@@ -109,66 +109,66 @@ export default function HotelList() {
   
   // --- 1. 核心数据请求方法 ---
   const fetchHotelData = async (params, pageNo = 1, currentSort = sortType) => {
-    if (loading) return;
-    setLoading(true);
+  if (loading) return; // 必须在这里拦截，防止重复请求
+  setLoading(true);
 
-    const { min, max } = getPriceRange(params.priceType);
-    // --- 新增：清洗城市名称 ---
-  // 将 "上海市" 转换为 "上海"，确保后端能匹配到
+  const { min, max } = getPriceRange(params.priceType);
   const cleanCity = params.city ? params.city.replace(/市$/, '') : '上海';
-    
-    // 构造符合后端 API 文档的参数
-    const apiQuery = {
-      page: pageNo,
-      limit: 10,
-      city: cleanCity
-    };
-
-    if (params.keyword) apiQuery.keyword = params.keyword;
-    if (params.starType && params.starType !== 'all') apiQuery.star = params.starType;
-    if (min !== undefined) apiQuery.min_price = min;
-    if (max !== undefined) apiQuery.max_price = max;
-    
-    // 排序逻辑映射
-    if (currentSort === 'price_low') apiQuery.sort = 'price_asc';
-    if (currentSort === 'rating') apiQuery.sort = 'price_desc'; // 假设文档中降序对应好评
-
-    try {
-      // 使用封装好的 request
-      const res = await request({
-        url: '/hotel/list',
-        method: 'GET',
-        data: apiQuery
-      });
-
-      if (res.code === 200) {
-        const { list: rawList, total } = res.data;
-        
-        // --- 2. 数据清洗与图片补全 ---
-        const formatted = rawList.map(item => ({
-          ...item,
-          imageUrl: item.cover_image?.startsWith('http') 
-                    ? item.cover_image 
-                    : `${IMAGE_HOST}${item.cover_image}`, 
-          // 确保 tags 是数组格式
-          tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
-          locationDesc: item.address,
-          score: 4.8 // 后端文档暂无评分，先写死
-        }));
-
-        if (pageNo === 1) {
-          setHotelList(formatted);
-        } else {
-          setHotelList(prev => [...prev, ...formatted]);
-        }
-        setHasMore(pageNo * 10 < total);
-      }
-    } catch (err) {
-      console.error('列表加载失败:', err);
-    } finally {
-      setLoading(false);
-    }
+  
+  const apiQuery = {
+    page: pageNo,
+    limit: 10,
+    city: cleanCity
   };
+
+  if (params.keyword) apiQuery.keyword = params.keyword;
+  if (params.starType && params.starType !== 'all') apiQuery.star = params.starType;
+  if (min !== undefined) apiQuery.min_price = min;
+  if (max !== undefined) apiQuery.max_price = max;
+  
+  if (currentSort === 'price_low') apiQuery.sort = 'price_asc';
+  if (currentSort === 'rating') apiQuery.sort = 'price_desc';
+
+  try {
+    const res = await request({
+      url: '/hotel/list',
+      method: 'GET',
+      data: apiQuery
+    });
+
+    if (res.code === 200) {
+      const { list: rawList, total } = res.data;
+      
+      const formatted = rawList.map(item => ({
+        ...item,
+        imageUrl: item.cover_image?.startsWith('http') 
+                  ? item.cover_image 
+                  : `${IMAGE_HOST}${item.cover_image}`, 
+        tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
+        locationDesc: item.address,
+        score: item.score || 4.8 // 如果后端有评分用后端的
+      }));
+
+      // --- 【修改点】分页拼接逻辑 ---
+      if (pageNo === 1) {
+        setHotelList(formatted);
+      } else {
+        // 函数式更新，确保拿到最新的列表进行合并
+        setHotelList(prev => [...prev, ...formatted]);
+      }
+      
+      // --- 【修改点】判断是否还有更多 ---
+      // 计算：当前已显示的条数 + 本次新加载条数 < 总条数
+      setHasMore((pageNo - 1) * 10 + rawList.length < total);
+    }
+  } catch (err) {
+    console.error('列表加载失败:', err);
+    Taro.showToast({ title: '加载失败', icon: 'none' });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 生成模拟数据 (实际开发中删除此函数)
   const generateMockData = (pageNo, params) => {
@@ -212,14 +212,21 @@ export default function HotelList() {
   // 4. 事件处理
   // 加载更多
   const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      const nextPage = page + 1
-      setPage(nextPage)
-      // 加载更多时，确保使用的是当前 queryParams 的最新值
-      fetchHotelData(queryParams, nextPage)
-    }
+  console.log('--- 触底事件成功触发 ---'); // 如果打印了这一行，说明成功了
+  
+  if (loading) {
+    console.log('当前正在加载，拦截请求');
+    return;
+  }
+  if (!hasMore) {
+    console.log('没有更多数据，拦截请求');
+    return;
   }
 
+  const nextPage = page + 1;
+  setPage(nextPage);
+  fetchHotelData(queryParams, nextPage, sortType);
+};
   // 确认筛选
   const handleFilterConfirm = () => {
     const newParams = {
@@ -338,8 +345,10 @@ const handleTabClick = (tabName) => {
 
 
 
+
+
   return (
-    <View className="list-page">
+  <View className="list-page">
     {/* 1. 顶部 Sticky 区域 - 按照HTML设计优化 */}
     <View className="sticky-header">
       {/* 搜索胶囊 - 完全重新设计 */}
@@ -425,49 +434,103 @@ const handleTabClick = (tabName) => {
       </ScrollView>
 
       {/* 排序栏 */}
-    <View className="sort-bar">
-      {/* 欢迎度排序 */}
-      <View 
-        className={`sort-item ${sortType === 'welcome' || activeTab === 'welcome' ? 'active' : ''}`}
-        hoverClass="sort-item--hover"
-        onClick={() => handleTabClick('welcome')}
-      >
-        <Text className="sort-text">
-          {welcomeOptions.find(o => o.value === sortType)?.label || '欢迎度'}
-        </Text>
-        <View className="sort-icon">▼</View>
+      <View className="sort-bar">
+        {/* 欢迎度排序 */}
+        <View 
+          className={`sort-item ${sortType === 'welcome' || activeTab === 'welcome' ? 'active' : ''}`}
+          hoverClass="sort-item--hover"
+          onClick={() => handleTabClick('welcome')}
+        >
+          <Text className="sort-text">
+            {welcomeOptions.find(o => o.value === sortType)?.label || '欢迎度'}
+          </Text>
+          <View className="sort-icon">▼</View>
+        </View>
+
+        {/* 位置距离 */}
+        <View 
+          className={`sort-item ${activeTab === 'distance' ? 'active' : ''}`}
+          hoverClass="sort-item--hover"
+          onClick={() => handleTabClick('distance')}
+        >
+          <Text className="sort-text">位置距离</Text>
+          <View className="sort-icon">▼</View>
+        </View>
+
+        {/* 价格/星级 - 保持你原有的逻辑 */}
+        <View 
+          className={`sort-item ${queryParams.priceType !== 'all' || queryParams.starType !== 'all' ? 'active' : ''}`}
+          hoverClass="sort-item--hover"
+          onClick={() => setShowFilterPopup(true)}
+        >
+          <Text className="sort-text">价格/星级</Text>
+          <View className="sort-icon">▼</View>
+          {(queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
+            <View className="filter-indicator"></View>
+          )}
+        </View>
+
+        <View className="sort-item" hoverClass="sort-item--hover">
+          <Text className="sort-text">筛选</Text>
+          <View className="sort-icon">≡</View>
+        </View>
       </View>
 
-      {/* 位置距离 */}
-      <View 
-        className={`sort-item ${activeTab === 'distance' ? 'active' : ''}`}
-        hoverClass="sort-item--hover"
-        onClick={() => handleTabClick('distance')}
-      >
-        <Text className="sort-text">位置距离</Text>
-        <View className="sort-icon">▼</View>
-      </View>
-
-      {/* 价格/星级 - 保持你原有的逻辑 */}
-      <View 
-        className={`sort-item ${queryParams.priceType !== 'all' || queryParams.starType !== 'all' ? 'active' : ''}`}
-        hoverClass="sort-item--hover"
-        onClick={() => setShowFilterPopup(true)}
-      >
-        <Text className="sort-text">价格/星级</Text>
-        <View className="sort-icon">▼</View>
-        {(queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
-          <View className="filter-indicator"></View>
-        )}
-      </View>
-
-      <View className="sort-item" hoverClass="sort-item--hover">
-        <Text className="sort-text">筛选</Text>
-        <View className="sort-icon">≡</View>
-      </View>
+      {/* 【核心修改】将当前筛选条件摘要移入 sticky-header 内部，确保它不随列表滑走 */}
+      {(queryParams.keyword || queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
+        <View className="filter-summary">
+          <Text className="summary-text">
+            当前筛选:
+            {queryParams.keyword && ` "${queryParams.keyword}"`}
+            {queryParams.priceType !== 'all' && ` 价格:${getPriceLabel(queryParams.priceType)}`}
+            {queryParams.starType !== 'all' && ` 星级:${getStarLabel(queryParams.starType)}`}
+          </Text>
+        </View>
+      )}
     </View>
 
-    {/* 下拉弹窗容器 - 针对“欢迎度排序” */}
+    {/* 2. 列表滚动区域 */}
+    <ScrollView
+      scrollY
+      className="list-scroll"
+      onScrollToLower={handleLoadMore} // 绑定触底事件
+      lowerThreshold={200}           // 距离底部 150px 时提前加载，提升体验
+      enhanced
+      // 【核心修改】移除写死的 1000rpx，依靠 SCSS 中的 flex: 1 自动计算高度
+    >
+      <View className="list-content">
+        {hotelList.map(hotel => (
+          <HotelCard 
+            key={hotel.id} 
+            data={hotel} 
+            // 修改列表页中的跳转代码
+            onClick={() => {
+              Taro.navigateTo({
+                // 将已有的日期状态传递给详情页
+                url: `/pages/detail/index?id=${hotel.id}&checkIn=${queryParams.checkInDate}&checkOut=${queryParams.checkOutDate}`
+              });
+            }}
+          />
+        ))}
+
+        {/* --- 修改开始：优化后的加载状态栏 --- */}
+        <View className="loading-status-bar">
+          {loading ? (
+            <Text className="status-loading">正在努力加载中...</Text>
+          ) : !hasMore ? (
+            <View className="no-more-container">
+              <View className="divider-line"></View>
+              <Text className="no-more-text">已经到底啦</Text>
+              <View className="divider-line"></View>
+            </View>
+          ) : (
+            <Text className="status-loading">上滑加载更多</Text>
+          )}
+        </View>
+      </View>
+    </ScrollView>
+
+    {/* 下拉弹窗容器 - 针对“欢迎度排序” - 保持逻辑 */}
     <Popup
       visible={activeTab === 'welcome'}
       position="top"
@@ -486,102 +549,60 @@ const handleTabClick = (tabName) => {
         ))}
       </View>
     </Popup>
-    </View>
 
-    {/* 当前筛选条件摘要 - 保持不变 */}
-    {(queryParams.keyword || queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
-      <View className="filter-summary">
-        <Text className="summary-text">
-          当前筛选:
-          {queryParams.keyword && ` "${queryParams.keyword}"`}
-          {queryParams.priceType !== 'all' && ` 价格:${getPriceLabel(queryParams.priceType)}`}
-          {queryParams.starType !== 'all' && ` 星级:${getStarLabel(queryParams.starType)}`}
-        </Text>
+    {/* 3. 价格/星级 筛选弹窗 */}
+    <Popup
+      visible={showFilterPopup}
+      position="bottom"
+      round
+      onClose={() => setShowFilterPopup(false)}
+    >
+      <View className="filter-popup">
+        <View className="popup-header">
+          <Text className="title">价格/星级筛选</Text>
+          <Text className="close" onClick={() => setShowFilterPopup(false)}>✕</Text>
+        </View>
+        
+        <ScrollView scrollY className="popup-body">
+          {/* 价格块 */}
+          <View className="section">
+            <Text className="section-title">价格预算</Text>
+            <View className="tags-grid">
+              {PRICE_OPTIONS.map(opt => (
+                <View 
+                  key={opt.value}
+                  className={`tag ${tempFilter.price === opt.value ? 'active' : ''}`}
+                  onClick={() => setTempFilter(p => ({ ...p, price: opt.value }))}
+                >
+                  {opt.label}
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* 星级块 */}
+          <View className="section">
+            <Text className="section-title">星级标准</Text>
+            <View className="tags-grid">
+              {STAR_OPTIONS.map(opt => (
+                <View 
+                  key={opt.value}
+                  className={`tag ${tempFilter.star === opt.value ? 'active' : ''}`}
+                  onClick={() => setTempFilter(p => ({ ...p, star: opt.value }))}
+                >
+                  {opt.label}
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+
+        <View className="popup-footer">
+          <View className="btn reset" onClick={() => setTempFilter({ price: 'all', star: 'all' })}>重置</View>
+          <View className="btn confirm" onClick={handleFilterConfirm}>查看酒店</View>
+        </View>
       </View>
-    )}
-
-      {/* 2. 列表滚动区域 */}
-      <ScrollView
-        scrollY
-        className="list-scroll"
-        onScrollToLower={handleLoadMore}
-        lowerThreshold={100}
-      >
-        <View className="list-content">
-          {hotelList.map(hotel => (
-            <HotelCard 
-              key={hotel.id} 
-              data={hotel} 
-              // 修改列表页中的跳转代码
-              onClick={() => {
-                Taro.navigateTo({
-                  // 将已有的日期状态传递给详情页
-                  url: `/pages/detail/index?id=${hotel.id}&checkIn=${queryParams.checkInDate}&checkOut=${queryParams.checkOutDate}`
-                });
-              }}
-            />
-          ))}
-
-          {/* 状态提示 */}
-          <View className="loading-tip">
-            {loading ? '加载中...' : (hasMore ? '上拉加载更多' : '没有更多了')}
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* 3. 价格/星级 筛选弹窗 */}
-      <Popup
-        visible={showFilterPopup}
-        position="bottom"
-        round
-        onClose={() => setShowFilterPopup(false)}
-      >
-        <View className="filter-popup">
-          <View className="popup-header">
-            <Text className="title">价格/星级筛选</Text>
-            <Text className="close" onClick={() => setShowFilterPopup(false)}>✕</Text>
-          </View>
-          
-          <ScrollView scrollY className="popup-body">
-            {/* 价格块 */}
-            <View className="section">
-              <Text className="section-title">价格预算</Text>
-              <View className="tags-grid">
-                {PRICE_OPTIONS.map(opt => (
-                  <View 
-                    key={opt.value}
-                    className={`tag ${tempFilter.price === opt.value ? 'active' : ''}`}
-                    onClick={() => setTempFilter(p => ({ ...p, price: opt.value }))}
-                  >
-                    {opt.label}
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* 星级块 */}
-            <View className="section">
-              <Text className="section-title">星级标准</Text>
-              <View className="tags-grid">
-                {STAR_OPTIONS.map(opt => (
-                  <View 
-                    key={opt.value}
-                    className={`tag ${tempFilter.star === opt.value ? 'active' : ''}`}
-                    onClick={() => setTempFilter(p => ({ ...p, star: opt.value }))}
-                  >
-                    {opt.label}
-                  </View>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-
-          <View className="popup-footer">
-            <View className="btn reset" onClick={() => setTempFilter({ price: 'all', star: 'all' })}>重置</View>
-            <View className="btn confirm" onClick={handleFilterConfirm}>查看酒店</View>
-          </View>
-        </View>
-      </Popup>
-    </View>
-  )
+    </Popup>
+  </View>
+)
 }
