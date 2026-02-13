@@ -23,6 +23,7 @@ import 'dayjs/locale/zh-cn'
 import './index.scss'
 import { Calendar, Popup } from '@nutui/nutui-react-taro';
 import request from '../../utils/request';
+import AiFloatBall from '../../components/AiFloatBall';
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
@@ -701,6 +702,12 @@ export default function Index() {
         {/* 底部留白 */}
         <View className="bottom-spacing"></View>
       </ScrollView>
+
+      {/* ========================================== */}
+      {/* 2. AI 悬浮球核心位置：放在 ScrollView 外部 */}
+      {/* 这样它会相对于屏幕固定（fixed），不会随页面滚动消失 */}
+      <AiFloatBall />
+      {/* ========================================== */}
 
       {/* 5. 新增：价格星级筛选弹窗 */}
       <Popup
