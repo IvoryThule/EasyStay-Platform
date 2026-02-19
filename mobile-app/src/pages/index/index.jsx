@@ -1,15 +1,15 @@
 ﻿import React, { useState, useRef } from 'react'
-import { 
-  View, 
-  Image, 
-  Input, 
-  Button, 
-  ScrollView, 
+import {
+  View,
+  Image,
+  Input,
+  Button,
+  ScrollView,
   Text,
   Swiper,
   SwiperItem
 } from '@tarojs/components'
-import Taro,{ 
+import Taro, {
   getCurrentInstance,
   useLoad,
   useReady,
@@ -21,12 +21,12 @@ import Taro,{
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import './index.scss'
-import { Calendar,Popup } from '@nutui/nutui-react-taro';
-
+import { Calendar, Popup } from '@nutui/nutui-react-taro';
+import request from '../../utils/request';
+import AiFloatBall from '../../components/AiFloatBall';
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
-
 // 快速标签数据
 const QUICK_TAGS = [
   { id: 1, icon: '⭐', label: '五星级', type: 'star' },
@@ -44,6 +44,7 @@ const PRICE_OPTIONS = [
   { label: '¥300-600', value: '300-600' },
   { label: '¥600+', value: '600-up' }
 ]
+
 const STAR_OPTIONS = [
   { label: '不限', value: 'all' },
   { label: '二星及以下/经济型', value: '2' },
@@ -51,6 +52,7 @@ const STAR_OPTIONS = [
   { label: '四星/高档', value: '4' },
   { label: '五星/豪华', value: '5' }
 ]
+
 
 // 最近浏览数据
 const RECENT_HOTELS = [
@@ -63,6 +65,7 @@ const RECENT_HOTELS = [
     image: 'https://modao.cc/agent-py/media/generated_images/2026-02-04/a55fae9d04fa47b383be512902d9f2b1.jpg',
     tags: ['五星级', '江景房', '行政酒廊']
   },
+
   {
     id: 2,
     name: '和平饭店',
@@ -81,6 +84,7 @@ const RECENT_HOTELS = [
     image: 'https://modao.cc/agent-py/media/generated_images/2026-02-04/d6da6cead0c74fa3bb26f2f684f5386a.jpg',
     tags: ['奢华度假', '园林景观', '私密性佳']
   },
+
   {
     id: 4,
     name: '宝格丽酒店',
@@ -89,8 +93,11 @@ const RECENT_HOTELS = [
     reviews: 1567,
     image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&q=80',
     tags: ['奢华品牌', '城市景观', '高端服务']
+
   }
+
 ]
+
 
 // 热门城市数据
 const POPULAR_CITIES = [
@@ -101,6 +108,7 @@ const POPULAR_CITIES = [
   { id: 5, name: '杭州', hotels: 540 },
   { id: 6, name: '成都', hotels: 630 }
 ]
+
 
 export default function Index() {
   // 页面状态管理
@@ -123,7 +131,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false)
   const [isCalendarVisible, setIsCalendarVisible] = useState(false)
 
-  
+
   // 2. 增加状态管理
   const [filterParams, setFilterParams] = useState({
     price: PRICE_OPTIONS[0],
@@ -161,7 +169,9 @@ export default function Index() {
     const [start, end] = param
     const startDate = dayjs(`${start[0]}-${start[1]}-${start[2]}`)
     const endDate = dayjs(`${end[0]}-${end[1]}-${end[2]}`)
-    
+
+
+
     setSearchParams(prev => ({
       ...prev,
       checkInDate: startDate.format('MM月DD日'),
@@ -173,12 +183,16 @@ export default function Index() {
     setIsCalendarVisible(false)
   }
 
- // 1. 修改 handleSearch 方法
+
+
+  // 1. 修改 handleSearch 方法
+
   const handleSearch = () => {
     // 基础验证
     if (!searchParams.keyword.trim() && searchParams.city === '请选择') {
       Taro.showToast({ title: '请选择目的地或输入关键词', icon: 'none' })
-      return
+     return
+
     }
 
     // 2. 构造查询参数对象
@@ -189,7 +203,9 @@ export default function Index() {
       checkOutDate: searchParams.checkOutDate,
       days: searchParams.nights,
       // 传递筛选条件的值 (value)，而不是 label
-      priceType: filterParams.price.value, 
+
+      priceType: filterParams.price.value,
+
       starType: filterParams.star.value
     }
     console.log('搜索参数:', queryObj)
@@ -198,7 +214,10 @@ export default function Index() {
 
     console.log('跳转到 list 页面，参数:', queryObj)
 
-   // 使用 switchTab 跳转到列表页（tabbar页面）
+
+
+    // 使用 switchTab 跳转到列表页（tabbar页面）
+
     Taro.switchTab({
       url: '/pages/list/index',
       success: () => {
@@ -223,10 +242,15 @@ export default function Index() {
     setShowCityPicker(false)
   }
   const openCalendar = (e) => {
-  console.log('点击了日期区域'); // 调试用
-  setIsCalendarVisible(true);
-};
- const handleDateSelect = () => {
+
+    console.log('点击了日期区域'); // 调试用
+
+    setIsCalendarVisible(true);
+
+  };
+
+  const handleDateSelect = () => {
+
     // 在实际项目中，这里会弹出日期选择器组件
     Taro.showToast({
       title: '日期选择功能开发中',
@@ -238,7 +262,9 @@ export default function Index() {
   const handleTagClick = (tag) => {
     setActiveTag(tag.id)
     console.log('选中标签:', tag)
-    
+
+
+
     // 根据标签类型执行不同操作
     switch (tag.type) {
       case 'star':
@@ -287,36 +313,47 @@ export default function Index() {
   }
 
   // 使用我的位置
-  const useMyLocation = () => {
-    // 获取当前位置
-    Taro.getLocation({
-      type: 'wgs84',
-      success: (res) => {
-        console.log('当前位置:', res)
+  const useMyLocation = async () => {
+    setLoading(true) // 开启加载状态
+    try {
+      // 1. 调用定位接口
+      const res = await request({
+        url: '/system/location',
+        method: 'GET'
+      })
+
+      // 2. 处理返回结果
+      if (res.code === 200 && res.data) {
+        const { city, province } = res.data
         
-        // 在实际项目中，这里会调用逆地理编码API获取城市信息
-        const city = '上海市' // 模拟获取到的城市
-        setCurrentCity(city)
+        // 优先取 city，如果没有（某些直辖市情况）取 province
+        const locationName = city || province || '上海市'
+
+        // 3. 更新状态
+        setCurrentCity(locationName)
         setSearchParams(prev => ({
           ...prev,
-          city: city
+          city: locationName
         }))
-        
+
         Taro.showToast({
-          title: '已获取当前位置',
+          title: `已定位到: ${locationName}`,
           icon: 'success',
           duration: 1500
         })
-      },
-      fail: (err) => {
-        console.error('获取位置失败:', err)
-        Taro.showToast({
-          title: '获取位置失败，请检查权限',
-          icon: 'error',
-          duration: 2000
-        })
+      } else {
+        throw new Error('定位解析失败')
       }
-    })
+    } catch (err) {
+      console.error('获取位置失败:', err)
+      // request.js 里已经处理了通用报错，这里可以补充逻辑
+      Taro.showToast({
+        title: '定位失败，请手动选择',
+        icon: 'none'
+      })
+    } finally {
+      setLoading(false) // 关闭加载状态
+    }
   }
 
   // 渲染热门城市
@@ -327,16 +364,16 @@ export default function Index() {
           <Text className="title">热门城市</Text>
           <Text className="subtitle">探索更多目的地</Text>
         </View>
-        <ScrollView 
-          className="cities-scroll" 
-          scrollX 
-          enhanced 
+        <ScrollView
+          className="cities-scroll"
+          scrollX
+          enhanced
           showScrollbar={false}
         >
           <View className="cities-container">
             {POPULAR_CITIES.map(city => (
-              <View 
-                key={city.id} 
+              <View
+                key={city.id}
                 className={`city-item ${currentCity.includes(city.name) ? 'active' : ''}`}
                 onClick={() => handleCitySelect(city.name)}
               >
@@ -344,16 +381,18 @@ export default function Index() {
                 <Text className="city-count">{city.hotels}家酒店</Text>
               </View>
             ))}
-          </View>
+        </View>
         </ScrollView>
       </View>
     )
   }
 
+
+
   return (
     <View className="page-container">
       {/* 页面主要内容区域 */}
-      <ScrollView 
+      <ScrollView
         className="main-content"
         scrollY
         enhanced
@@ -370,7 +409,7 @@ export default function Index() {
           interval={4000}
         >
           <SwiperItem>
-            <View 
+            <View
               className="banner-item"
               onClick={() => navigateTo({ url: '/pages/promotion/index?id=1' })}
             >
@@ -389,9 +428,9 @@ export default function Index() {
               </View>
             </View>
           </SwiperItem>
-          
+
           <SwiperItem>
-            <View 
+            <View
               className="banner-item"
               onClick={() => navigateTo({ url: '/pages/promotion/index?id=2' })}
             >
@@ -409,9 +448,9 @@ export default function Index() {
               </View>
             </View>
           </SwiperItem>
-          
+
           <SwiperItem>
-            <View 
+            <View
               className="banner-item"
               onClick={() => navigateTo({ url: '/pages/promotion/index?id=3' })}
             >
@@ -431,36 +470,35 @@ export default function Index() {
           </SwiperItem>
         </Swiper>
 
+
+
         {/* 搜索核心区域 - 取消负margin，避免覆盖banner */}
         <View className="search-section">
           <View className="search-card">
             {/* 位置选择 */}
             <View className="search-row location-row">
-              <View 
-                className="location-select"
+
+              <View
+                className="location-left"
                 onClick={() => setShowCityPicker(!showCityPicker)}
               >
                 <Text className="location-icon">📍</Text>
-                <View className="location-info">
-                  <Text className="location-label">目的地</Text>
-                  <Text className="location-value">{searchParams.city}</Text>
-                </View>
-                <Text className="arrow-icon">›</Text>
+                <Text className="location-value">{searchParams.city}</Text>
               </View>
-              
-              <Button 
+              <View
+
                 className="location-btn"
                 onClick={useMyLocation}
               >
-                <Text className="btn-icon">📍</Text>
+                <Text className="btn-icon">🎯</Text>
                 <Text className="btn-text">我的位置</Text>
-              </Button>
+              </View>
             </View>
 
             {/* 修改：点击整个 date-row 触发日历 */}
             <View className="search-row date-row" onClick={openCalendar}
-  // 增加 hover-class 方便视觉确认是否点击到
-  hoverClass="date-row-hover">
+              // 增加 hover-class 方便视觉确认是否点击到
+              hoverClass="date-row-hover">
               <View className="date-item checkin">
                 <Text className="date-label">入住日期</Text>
                 <View className="date-info">
@@ -468,14 +506,13 @@ export default function Index() {
                   <Text className="date-weekday">{searchParams.checkInWeekday}</Text>
                 </View>
               </View>
-              
+
               <View className="night-count">
                 <Text className="night-text">{searchParams.nights}晚</Text>
               </View>
-              
-              <View 
+
+              <View
                 className="date-item checkout"
-                
               >
                 <Text className="date-label">离店日期</Text>
                 <View className="date-info">
@@ -484,6 +521,7 @@ export default function Index() {
                 </View>
               </View>
             </View>
+
 
             {/* 关键词搜索 */}
             <View className="search-row keyword-row">
@@ -501,7 +539,7 @@ export default function Index() {
                 onConfirm={handleSearch}
               />
               {searchParams.keyword && (
-                <Text 
+                <Text
                   className="clear-icon"
                   onClick={() => setSearchParams(prev => ({ ...prev, keyword: '' }))}
                 >
@@ -514,7 +552,7 @@ export default function Index() {
             <View className="search-row rooms-row">
               <Text className="rooms-label">房间数量</Text>
               <View className="rooms-controls">
-                <Button 
+                <Button
                   className="control-btn minus"
                   onClick={() => setSearchParams(prev => ({
                     ...prev,
@@ -524,7 +562,7 @@ export default function Index() {
                   -
                 </Button>
                 <Text className="rooms-count">{searchParams.rooms}间</Text>
-                <Button 
+                <Button
                   className="control-btn plus"
                   onClick={() => setSearchParams(prev => ({
                     ...prev,
@@ -533,31 +571,34 @@ export default function Index() {
                 >
                   +
                 </Button>
+              </View>
             </View>
-          </View>
-          
-          {/* 4. 新增：价格/星级筛选行 */}
-            <View 
-              className="search-row filter-row" 
+
+            {/* 筛选行 */}
+            <View
+              className="search-row filter-row"
               onClick={() => {
                 setTempFilter({ ...filterParams })
                 setIsFilterVisible(true)
               }}
-              hoverClass="row-hover"
             >
-              <Text className="filter-label">价格/星级</Text>
-              <View className="filter-display">
-                <Text className={`filter-value ${(filterParams.price.value === 'all' && filterParams.star.value === 'all') ? 'placeholder' : ''}`}>
-                  {filterParams.price.value === 'all' && filterParams.star.value === 'all' 
-                    ? '请选择价格/星级' 
-                    : `${filterParams.price.label} · ${filterParams.star.label}`}
-                </Text>
-                <Text className="arrow-icon">›</Text>
+              <View className="filter-left">
+                <Text className="filter-icon">🏷️</Text> {/* 保持图标一致 */}
+                <View className="filter-info">
+                  <Text className="filter-label">价格/星级</Text>
+                  <Text className={`filter-value ${(filterParams.price.value === 'all' && filterParams.star.value === 'all') ? 'placeholder' : ''}`}>
+                    {filterParams.price.value === 'all' && filterParams.star.value === 'all'
+                      ? '请选择价格/星级'
+                      : `${filterParams.price.label} · ${filterParams.star.label}`}
+                  </Text>
+                </View>
               </View>
+              <Text className="arrow-icon">›</Text>
             </View>
 
+
             {/* 搜索按钮 */}
-            <Button 
+            <Button
               className="search-button"
               onClick={handleSearch}
               loading={loading}
@@ -572,23 +613,22 @@ export default function Index() {
 
         {/* 热门城市推荐 */}
         {renderPopularCities()}
-
         {/* 快速标签 */}
         <View className="quick-tags-section">
           <View className="section-header">
             <Text className="section-title">为您推荐</Text>
             <Text className="section-subtitle">智能推荐热门筛选</Text>
           </View>
-          
-          <ScrollView 
-            className="tags-scroll" 
-            scrollX 
-            enhanced 
+
+          <ScrollView
+            className="tags-scroll"
+            scrollX
+            enhanced
             showScrollbar={false}
           >
             <View className="tags-container">
               {QUICK_TAGS.map(tag => (
-                <View 
+                <View
                   key={tag.id}
                   className={`tag-item ${activeTag === tag.id ? 'active' : ''}`}
                   onClick={() => handleTagClick(tag)}
@@ -608,23 +648,25 @@ export default function Index() {
               <Text className="section-title">最近看过</Text>
               <Text className="section-badge">{RECENT_HOTELS.length}</Text>
             </View>
-            <Text 
-              className="clear-history"
-              onClick={clearHistory}
+
+            <Text
+             className="clear-history"
+             onClick={clearHistory}
             >
               清空历史
             </Text>
           </View>
-          
-          <ScrollView 
-            className="hotels-scroll" 
-            scrollX 
-            enhanced 
+
+
+          <ScrollView
+            className="hotels-scroll"
+            scrollX
+            enhanced
             showScrollbar={false}
           >
             <View className="hotels-container">
               {RECENT_HOTELS.map(hotel => (
-                <View 
+                <View
                   key={hotel.id}
                   className="hotel-card"
                   onClick={() => handleHotelClick(hotel)}
@@ -654,13 +696,18 @@ export default function Index() {
                   </View>
                 </View>
               ))}
-            </View>
+           </View>
           </ScrollView>
         </View>
-
         {/* 底部留白 */}
         <View className="bottom-spacing"></View>
       </ScrollView>
+
+      {/* ========================================== */}
+      {/* 2. AI 悬浮球核心位置：放在 ScrollView 外部 */}
+      {/* 这样它会相对于屏幕固定（fixed），不会随页面滚动消失 */}
+      <AiFloatBall />
+      {/* ========================================== */}
 
       {/* 5. 新增：价格星级筛选弹窗 */}
       <Popup
@@ -674,13 +721,15 @@ export default function Index() {
             <Text className="popup-title">价格/星级筛选</Text>
             <Text className="popup-close" onClick={() => setIsFilterVisible(false)}>✕</Text>
           </View>
-          
+
+
+
           <ScrollView className="popup-body" scrollY>
             <View className="filter-group">
               <Text className="group-title">价格预算</Text>
               <View className="options-grid">
                 {PRICE_OPTIONS.map(opt => (
-                  <View 
+                  <View
                     key={opt.value}
                     className={`option-item ${tempFilter.price.value === opt.value ? 'active' : ''}`}
                     onClick={() => setTempFilter(p => ({ ...p, price: opt }))}
@@ -695,7 +744,7 @@ export default function Index() {
               <Text className="group-title">星级标准</Text>
               <View className="options-grid">
                 {STAR_OPTIONS.map(opt => (
-                  <View 
+                  <View
                     key={opt.value}
                     className={`option-item ${tempFilter.star.value === opt.value ? 'active' : ''}`}
                     onClick={() => setTempFilter(p => ({ ...p, star: opt }))}
@@ -707,6 +756,7 @@ export default function Index() {
             </View>
           </ScrollView>
 
+
           <View className="popup-footer">
             <Button className="reset-btn" onClick={() => setTempFilter({ price: PRICE_OPTIONS[0], star: STAR_OPTIONS[0] })}>重置</Button>
             <Button className="confirm-btn" onClick={handleFilterConfirm}>完成</Button>
@@ -715,15 +765,28 @@ export default function Index() {
       </Popup>
 
 
-     {isCalendarVisible && (
-      <Calendar
-        visible={isCalendarVisible}
-        type="range"
-        startDate={dayjs().format('YYYY-MM-DD')}
-        endDate={dayjs().add(6, 'month').format('YYYY-MM-DD')}
-        onClose={() => setIsCalendarVisible(false)}
-        onConfirm={handleConfirmDate}
-      />
+
+      // 删除 Popup 包装，直接使用 Calendar 的弹窗模式
+{isCalendarVisible && (
+  <Calendar
+    visible={isCalendarVisible}
+    className="home-calendar-wrapper" // 关键：添加这个类名用于 CSS 隔离
+    type="range"
+    startDate={dayjs().format('YYYY-MM-DD')}
+    endDate={dayjs().add(12, 'month').format('YYYY-MM-DD')}
+    onClose={() => setIsCalendarVisible(false)}
+    onConfirm={handleConfirmDate}
+    showConfirm={true}
+    poppable={true}
+    position="bottom"
+    round
+    closeable
+    // safeAreaInsetBottom // 建议注释掉，我们在 CSS 中精确控制
+    style={{
+      height: '85%', // 统一设为 85%
+      '--nutui-calendar-confirm-btn-height': '72px',
+    }}
+  />
 )}
       {/* 加载状态 */}
       {loading && (
@@ -741,7 +804,7 @@ export default function Index() {
           <View className="city-picker" onClick={(e) => e.stopPropagation()}>
             <View className="picker-header">
               <Text className="picker-title">选择城市</Text>
-              <Text 
+              <Text
                 className="picker-close"
                 onClick={() => setShowCityPicker(false)}
               >
@@ -750,7 +813,9 @@ export default function Index() {
             </View>
             <ScrollView className="picker-list" scrollY>
               {POPULAR_CITIES.map(city => (
-                <View 
+
+                <View
+
                   key={city.id}
                   className={`picker-item ${currentCity.includes(city.name) ? 'selected' : ''}`}
                   onClick={() => handleCitySelect(city.name)}
@@ -760,7 +825,7 @@ export default function Index() {
                 </View>
               ))}
             </ScrollView>
-            
+
           </View>
         </View>
       )}
