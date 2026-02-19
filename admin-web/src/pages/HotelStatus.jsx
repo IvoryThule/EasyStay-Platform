@@ -35,8 +35,7 @@ const fetchMyHotels = async () => {
   const columns = [
     { title: '酒店名称', dataIndex: 'name', key: 'name' },
     { title: '城市', dataIndex: 'city', key: 'city' },
-    { 
-      title: '状态', 
+    { title: '状态', 
       dataIndex: 'status', 
       key: 'status',
       render: (status, record) => {
@@ -50,13 +49,17 @@ const fetchMyHotels = async () => {
         return (
           <Space direction="vertical" size={0}>
             <Tag color={config.color}>{config.text}</Tag>
-            {status === 2 && record.audit_remark && (
-              <Text type="danger" style={{ fontSize: '12px' }}>原因: {record.audit_remark}</Text>
+            {/* 确保这里读取的是 record.reject_reason */}
+            {status === 2 && record.reject_reason && (
+              <div style={{ marginTop: 5, padding: '4px 8px', background: '#fff2f0', border: '1px solid #ffccc7', borderRadius: '4px' }}>
+                <Text type="danger" style={{ fontSize: '12px' }}>原因: {record.reject_reason}</Text>
+              </div>
             )}
           </Space>
         );
       }
     },
+
     {
       title: '操作',
       key: 'action',

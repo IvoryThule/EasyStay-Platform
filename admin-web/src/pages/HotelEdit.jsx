@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { 
   Form, Input, InputNumber, Button, Card, message, Upload, Space,
-  Row, Col, Select, DatePicker, Divider, TimePicker, Spin 
+  Row, Col, Select, DatePicker, Divider, Spin 
 } from 'antd';
 import { 
   PlusOutlined, BookOutlined, EnvironmentOutlined, 
@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import request from '../utils/request';
-import { ROUTE_PATHS } from '../utils/constants';
+import { STORAGE_KEYS } from '../utils/constants';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -17,14 +17,16 @@ const { Option } = Select;
 const HotelEdit = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+  const [currentStatus, setCurrentStatus] = useState(null);
   const navigate = useNavigate();
-  const { id } = useParams(); // 从路由获取酒店ID: /hotel/edit/:id
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   
-  // 判断是否为只读模式：URL带有 readonly=true 参数时禁用表单
-  const isReadOnly = searchParams.get('readonly') === 'true';
+  const BASE_URL = 'http://localhost:3000';
 
-  // 1. 初始化：如果是编辑模式（有ID），则获取酒店详情
+  const isReadOnly = searchParams.get('readonly') === 'true' || (id && currentStatus !== 2 && currentStatus !== null);
+
   useEffect(() => {
     if (id) {
       fetchHotelDetail(id);
@@ -36,62 +38,77 @@ const HotelEdit = () => {
     try {
       const res = await request.get(`/hotel/detail/${hotelId}`);
       const data = res.data;
+      setCurrentStatus(data.status);
 
-      // 解析 tags 数组中的特殊信息（EN:英文名, OPENING:开业时间）
+      if (data.cover_image) {
+        const fullUrl = data.cover_image.startsWith('http') ? data.cover_image : `${BASE_URL}${data.cover_image}`;
+        setFileList([{ uid: '-1', name: 'image.png', status: 'done', url: fullUrl, thumbUrl: fullUrl }]);
+      }
+
       const nameEn = data.tags?.find(t => t.startsWith('EN:'))?.split(':')[1] || '';
       const openingDate = data.tags?.find(t => t.startsWith('OPENING:'))?.split(':')[1];
 
-      // 将后端数据填充到表单
       form.setFieldsValue({
         name: data.name,
         name_en: nameEn,
         address: data.address,
-        city: data.city,
+        city: data.city ? [data.city] : [],
         star: data.star,
         price: data.price,
         opening_date: openingDate ? dayjs(openingDate) : null,
-        // 回显房型数据
-        room_types: data.roomTypes?.map(rt => ({
-          type_name: rt.name,
+        room_types: (data.roomTypes || data.room_types || []).map(rt => ({
+          type_name: rt.name, 
           price: rt.price,
           stock: rt.stock
         }))
       });
     } catch (error) {
-      console.error('Fetch Detail Error:', error);
-      message.error('获取酒店详情失败');
+      message.error('获取详情失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. 提交表单逻辑
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // 构造符合后端要求的 tags
+      let coverImage = '';
+      if (fileList.length > 0) {
+        const file = fileList[0];
+        // 如果是新上传的取 response，如果是回显的取 url 并去掉域名
+        const rawUrl = file.response?.data?.url || file.response?.url || file.url || '';
+        coverImage = rawUrl.replace(BASE_URL, '');
+      }
+
       const tags = [
         `EN:${values.name_en || ''}`,
         `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`
       ];
 
+      const roomTypesJson = JSON.stringify((values.room_types || []).map(item => ({
+      name: item.type_name,
+      price: item.price,
+      stock: item.stock
+    })));
+
       const payload = {
-        id: id, // 如果是更新，必须带上酒店ID
-        name: values.name,
-        address: values.address,
-        city: values.city || "上海",
-        star: values.star,
-        price: values.price,
-        tags: tags,
-        room_types: values.room_types // 房型列表
+        id: id,
+        ...values,
+        city: Array.isArray(values.city) ? values.city[0] : values.city,
+        cover_image: coverImage,
+        tags: [
+        `EN:${values.name_en || ''}`,
+        `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
+        `ROOMDATA:${roomTypesJson}`
+        ],
+        status: 0 
       };
 
-      // 根据是否有 ID 判断调用创建还是更新接口
       const apiUrl = id ? '/hotel/update' : '/hotel/create';
       await request.post(apiUrl, payload);
 
       message.success(id ? '信息已更新，请等待重新审核' : '酒店发布成功，请等待审核');
-      navigate('/hotel/status'); // 跳转回状态列表页
+      navigate('/hotel/status');
     } catch (error) {
       message.error(error.response?.data?.message || '提交失败');
     } finally {
@@ -116,10 +133,25 @@ const HotelEdit = () => {
             form={form}
             layout="vertical"
             onFinish={onFinish}
-            disabled={isReadOnly} // 核心：如果是查看模式，禁用所有交互
+            disabled={isReadOnly}
             initialValues={{ star: 3, city: '上海' }}
           >
             <Divider orientation="left">基本信息</Divider>
+
+            <Form.Item label="酒店主图" required>
+              <Upload
+                action={`${BASE_URL}/api/upload`}
+                name="file"
+                headers={{ Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.TOKEN)}` }}
+                listType="picture-card"
+                fileList={fileList}
+                onChange={({ fileList }) => setFileList(fileList)}
+                maxCount={1}
+              >
+                {fileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 8 }}>上传</div></div>}
+              </Upload>
+            </Form.Item>
+
             <Row gutter={24}>
               <Col span={12}>
                 <Form.Item name="name" label="酒店名称" rules={[{ required: true, message: '请输入名称' }]}>
@@ -136,10 +168,18 @@ const HotelEdit = () => {
             <Row gutter={24}>
               <Col span={8}>
                 <Form.Item name="city" label="所在城市">
-                  <Select placeholder="选择城市">
+                  {/* 增加 mode="tags" 支持自定义城市输入 */}
+                  <Select 
+                    showSearch 
+                    mode="tags" 
+                    placeholder="请选择或输入城市"
+                    maxCount={1}
+                  >
                     <Option value="上海">上海</Option>
                     <Option value="北京">北京</Option>
                     <Option value="杭州">杭州</Option>
+                    <Option value="深圳">深圳</Option>
+                    <Option value="成都">成都</Option>
                   </Select>
                 </Form.Item>
               </Col>
@@ -154,9 +194,7 @@ const HotelEdit = () => {
               <Col span={8}>
                 <Form.Item name="star" label="酒店星级">
                   <Select>
-                    <Option value={3}>三星级</Option>
-                    <Option value={4}>四星级</Option>
-                    <Option value={5}>五星级</Option>
+                    {[1, 2, 3, 4, 5].map(s => <Option key={s} value={s}>{s}星级</Option>)}
                   </Select>
                 </Form.Item>
               </Col>
