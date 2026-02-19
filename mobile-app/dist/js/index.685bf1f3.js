@@ -1,0 +1,1 @@
+import{t as e,v as s,V as a,T as n}from"./vendors.f0b839a9.js";function o(){return e.useLoad(function(){console.log("Page loaded.")}),s.jsx(a,{className:"index",children:s.jsx(n,{children:"Page Content"})})}export{o as default};
