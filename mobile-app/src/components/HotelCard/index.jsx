@@ -28,15 +28,19 @@ const HotelCard = ({ data, onClick }) => {
           </View>
           
           {/* 评分与评论 */}
-          <View className="hotel-card__stats">
-             <View className="score-badge">
-               <Text className="score-num">{data.score}</Text>
-               <Text className="score-text">{data.scoreDesc}</Text>
-             </View>
-             <Text className="comment-text">
-               {data.commentCount}点评 · {data.collectionCount / 10000}万收藏
-             </Text>
-          </View>
+          {data.score && (
+            <View className="hotel-card__stats">
+              <View className="score-badge">
+                <Text className="score-num">{data.score}</Text>
+                <Text className="score-text">{data.scoreDesc || '好评'}</Text>
+              </View>
+              {data.commentCount > 0 && (
+                <Text className="comment-text">
+                  {data.commentCount}点评{data.collectionCount ? ` · ${Math.floor(data.collectionCount / 10000)}万收藏` : ''}
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* 位置与推荐语 */}
           <Text className="hotel-card__location">{data.locationDesc}</Text>

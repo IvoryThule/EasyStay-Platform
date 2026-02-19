@@ -1,6 +1,6 @@
 ﻿// pages/list/index.jsx
 import React, { useState, useEffect, useRef } from 'react'
-import { View, Text, ScrollView, Image } from '@tarojs/components'
+import { View, Text, ScrollView, Image, Input } from '@tarojs/components'
 import Taro, { getCurrentInstance, navigateBack, useLoad, useDidShow,switchTab } from '@tarojs/taro'
 import { Popup } from '@nutui/nutui-react-taro'
 import HotelCard from '../../components/HotelCard' // 引入卡片组件
@@ -63,14 +63,21 @@ export default function HotelList() {
   // 2. 页面加载：从缓存获取参数并请求数据
   // --- 修改点 1: 生命周期调整 ---
   // 将 loadSearchParams 从 useLoad 移出，放入 useDidShow
+  // --- 初始化标识，只加载一次 ---
+  const hasInitialized = useRef(false)
+
   useLoad(() => {
     console.log('列表页加载（仅在页面销毁后重新进入时触发）')
   })
-  // 3. 每次显示页面时也检查参数（可选）
+
   useDidShow(() => {
     console.log('列表页显示（每次切回或进入该页都会触发）')
-    // 强制每次进入页面时，重新读取最新的缓存
-    loadSearchParams()
+    if (!hasInitialized.current) {
+      // 首次进入页面，读取缓存初始化
+      hasInitialized.current = true
+      loadSearchParams()
+    }
+    // 从详情页返回时不重置筛选，保持当前筛选状态
   })
 
   // --- 修改点 2: 完善 loadSearchParams 逻辑 ---
@@ -79,30 +86,27 @@ export default function HotelList() {
     const cachedParams = Taro.getStorageSync('hotelSearchParams')
     console.log('【检测缓存同步】:', cachedParams)
 
-    if (cachedParams) {
-      // 2. 构造最新参数对象
-      const newParams = {
-        city: cachedParams.city || '上海',
-        checkInDate: cachedParams.checkInDate || '',
-        checkOutDate: cachedParams.checkOutDate || '',
-        keyword: cachedParams.keyword || '',
-        priceType: cachedParams.priceType || 'all',
-        starType: cachedParams.starType || 'all'
-      };
+    // 2. 确定最终使用的参数 - 始终不限制城市,显示所有酒店
+    let newParams = {
+      city: '', // 不限城市,显示所有酒店
+      checkInDate: cachedParams?.checkInDate || '',
+      checkOutDate: cachedParams?.checkOutDate || '',
+      keyword: cachedParams?.keyword || '',
+      priceType: cachedParams?.priceType || 'all',
+      starType: cachedParams?.starType || 'all'
+    };
 
-      // 3. 更新 React 状态 (用于 UI 显示)
-      setQueryParams(newParams);
-      setTempFilter({
-        price: newParams.priceType,
-        star: newParams.starType
-      });
+    // 3. 更新 React 状态 (用于 UI 显示)
+    setQueryParams(newParams);
+    setTempFilter({
+      price: newParams.priceType,
+      star: newParams.starType
+    });
 
-      // 4. 重要：重置列表并使用 newParams 直接请求数据
-      // 不要使用 queryParams，因为 setQueryParams 是异步的，此时 queryParams 还是旧值
-      setPage(1); 
-      setHotelList([]); 
-      fetchHotelData(newParams, 1); 
-    }
+    // 4. 重要：重置列表并使用 newParams 直接请求数据
+    setPage(1); 
+    setHotelList([]); 
+    fetchHotelData(newParams, 1); 
   }
   
   // 3. 模拟 API 请求方法
@@ -113,14 +117,15 @@ export default function HotelList() {
   setLoading(true);
 
   const { min, max } = getPriceRange(params.priceType);
-  const cleanCity = params.city ? params.city.replace(/市$/, '') : '上海';
   
   const apiQuery = {
     page: pageNo,
-    limit: 10,
-    city: cleanCity
+    limit: 10
   };
 
+  // 始终不添加city条件,显示所有酒店
+  // 用户可以通过关键词搜索来筛选特定城市
+  
   if (params.keyword) apiQuery.keyword = params.keyword;
   if (params.starType && params.starType !== 'all') apiQuery.star = params.starType;
   if (min !== undefined) apiQuery.min_price = min;
@@ -146,7 +151,7 @@ export default function HotelList() {
                   : `${IMAGE_HOST}${item.cover_image}`, 
         tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
         locationDesc: item.address,
-        score: item.score || 4.8 // 如果后端有评分用后端的
+        score: item.score // 只使用后端真实评分
       }));
 
       // --- 【修改点】分页拼接逻辑 ---
@@ -168,28 +173,6 @@ export default function HotelList() {
     setLoading(false);
   }
 };
-
-
-  // 生成模拟数据 (实际开发中删除此函数)
-  const generateMockData = (pageNo, params) => {
-    // 根据筛选条件简单过滤模拟
-    const basePrice = params.priceType === '600-up' ? 800 : 300
-    
-    return Array.from({ length: 10 }).map((_, index) => ({
-      id: `${pageNo}-${index}`,
-      name: `${params.city}模拟酒店-${pageNo}-${index + 1}`,
-      imageUrl: 'https://modao.cc/agent-py/media/generated_images/2026-02-04/354e4c83e3b445bba8a31a4d2d7c0700.jpg',
-      score: 4.8,
-      scoreDesc: '超棒',
-      commentCount: 1000 + index * 5,
-      collectionCount: 5000,
-      locationDesc: `距市中心 ${index + 1}.5km`,
-      tags: ['免费取消', '近地铁'],
-      price: basePrice + index * 50,
-      originalPrice: basePrice + index * 50 + 200,
-      ranking: index === 0 ? { text: '人气榜 No.1', type: 'gold' } : null
-    }))
-  }
 
   // --- 3. 生命周期统一处理 ---
   useDidShow(() => {
@@ -227,6 +210,19 @@ export default function HotelList() {
   setPage(nextPage);
   fetchHotelData(queryParams, nextPage, sortType);
 };
+
+  // 处理关键词搜索
+  const handleKeywordSearch = (keyword) => {
+    const newParams = {
+      ...queryParams,
+      keyword: keyword.trim()
+    }
+    setQueryParams(newParams)
+    setPage(1)
+    setHotelList([])
+    fetchHotelData(newParams, 1)
+  }
+
   // 确认筛选
   const handleFilterConfirm = () => {
     const newParams = {
@@ -392,16 +388,34 @@ const handleTabClick = (tabName) => {
               <View className="section-divider right-vertical-line"></View>
             </View>
 
-            {/* 关键词部分 */}
+            {/* 关键词搜索区域 - 内联输入框 */}
             <View className="capsule-section keyword-section">
-              <Text className="keyword-text">
-                {queryParams.keyword || '位置/品牌/酒店'}
-              </Text>
+              <Text className="search-prefix-icon">&#xe8b6;</Text>
+              <Input
+                className="keyword-input"
+                placeholder="城市/位置/品牌/酒店名"
+                placeholderClass="keyword-placeholder"
+                value={queryParams.keyword}
+                onInput={(e) => setQueryParams(p => ({ ...p, keyword: e.detail.value }))}
+                onConfirm={(e) => handleKeywordSearch(e.detail.value)}
+                confirmType="search"
+              />
+              {queryParams.keyword ? (
+                <View
+                  className="keyword-clear"
+                  onClick={() => handleKeywordSearch('')}
+                >
+                  <Text>×</Text>
+                </View>
+              ) : null}
             </View>
             
-            {/* 搜索图标 */}
-            <View className="search-icon-section">
-              <Text className="search-icon">🔍</Text>
+            {/* 搜索按鈕 */}
+            <View
+              className="search-icon-section"
+              onClick={() => handleKeywordSearch(queryParams.keyword)}
+            >
+              <Text className="search-icon">搜索</Text>
             </View>
           </View>
         </View>

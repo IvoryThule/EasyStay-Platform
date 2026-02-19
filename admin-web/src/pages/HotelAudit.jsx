@@ -165,7 +165,26 @@ const HotelAudit = () => {
             </>
           )}
           {record.status === 1 && <Button type="link" danger onClick={() => handleStatusChange(record.id, 3)}>下线</Button>}
-          {(record.status === 3 || record.status === 2) && <Button type="link" onClick={() => handleStatusChange(record.id, 0)}>重审</Button>}
+          {record.status === 3 && (
+            <>
+              <Button type="link" onClick={() => {
+                Modal.confirm({
+                  title: '确认恢复?',
+                  content: '恢复后酒店将重新上线并对用户可见',
+                  onOk: async () => {
+                    try {
+                      await request.post('/hotel/restore', { id: record.id });
+                      message.success('恢复成功');
+                      fetchList();
+                    } catch (error) {
+                      message.error('恢复失败');
+                    }
+                  }
+                });
+              }}>恢复上线</Button>
+            </>
+          )}
+          {record.status === 2 && <Button type="link" onClick={() => handleStatusChange(record.id, 0)}>重审</Button>}
         </Space>
       ),
     },

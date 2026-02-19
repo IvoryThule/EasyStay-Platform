@@ -14,13 +14,13 @@ export default function AiFloatBall() {
   const [scrollId, setScrollId] = useState('')
 
   // 获取屏幕信息用于定位初始位置
-  const [initPos, setInitPos] = useState({ x: 300, y: 500 })
+  const [initPos, setInitPos] = useState({ x: 0, y: 500 })
 
   useEffect(() => {
     const sys = Taro.getSystemInfoSync()
     setInitPos({
-      x: sys.windowWidth - 80, // 靠右
-      y: sys.windowHeight - 150 // 靠下且避开 TabBar
+      x: sys.windowWidth - 70, // 靠右，留 70px 边距
+      y: sys.windowHeight - 160 // 靠下且避开 TabBar
     })
   }, [])
 

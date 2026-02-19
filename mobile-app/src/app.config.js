@@ -26,7 +26,7 @@
       },
       {
         pagePath: 'pages/list/index',
-        text: '目的地',
+        text: '酒店列表',
         iconPath: 'assets/tabbar/map.png',
         selectedIconPath: 'assets/tabbar/map-active.png'
       },

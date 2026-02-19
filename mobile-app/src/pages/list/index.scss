@@ -150,20 +150,43 @@ $text-secondary: #6b7280;
         // 关键词部分
         &.keyword-section {
           flex: 1;
-          min-width: 0; // 防止内容溢出
-          
-          .keyword-text {
+          min-width: 0;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          .search-prefix-icon {
+            font-size: 18px;
+            color: #9ca3af;
+            flex-shrink: 0;
+          }
+
+          .keyword-input {
+            flex: 1;
+            font-size: 20px;
+            color: #1f2937;
+            line-height: 1.2;
+            height: 36px;
+            min-width: 0;
+          }
+
+          .keyword-placeholder {
             font-size: 20px;
             color: #9ca3af;
-            line-height: 1.2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             font-weight: 400;
-            
-            &:empty:before {
-              content: '位置/品牌/酒店';
-            }
+          }
+
+          .keyword-clear {
+            width: 28px;
+            height: 28px;
+            background: #d1d5db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+            color: #fff;
           }
         }
       }

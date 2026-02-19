@@ -29,12 +29,12 @@ import AiFloatBall from '../../components/AiFloatBall';
 dayjs.locale('zh-cn')
 // 快速标签数据
 const QUICK_TAGS = [
-  { id: 1, icon: '⭐', label: '五星级', type: 'star' },
-  { id: 2, icon: '📱', label: '网红博主推荐', type: 'influencer' },
-  { id: 3, icon: '👨‍👩‍👧‍👦', label: '亲子乐园', type: 'family' },
-  { id: 4, icon: '🎨', label: '设计精品', type: 'design' },
-  { id: 5, icon: '🏊', label: '无边泳池', type: 'pool' },
-  { id: 6, icon: '🍽️', label: '米其林餐厅', type: 'restaurant' }
+  { id: 1, label: '五星级', type: 'star' },
+  { id: 2, label: '网红推荐', type: 'influencer' },
+  { id: 3, label: '亲子酒店', type: 'family' },
+  { id: 4, label: '设计精品', type: 'design' },
+  { id: 5, label: '游泳池', type: 'pool' },
+  { id: 6, label: '美食餐厅', type: 'restaurant' }
 ]
 
 const PRICE_OPTIONS = [
@@ -52,52 +52,6 @@ const STAR_OPTIONS = [
   { label: '四星/高档', value: '4' },
   { label: '五星/豪华', value: '5' }
 ]
-
-
-// 最近浏览数据
-const RECENT_HOTELS = [
-  {
-    id: 1,
-    name: '上海中心J酒店',
-    price: 2880,
-    rating: 4.9,
-    reviews: 1280,
-    image: 'https://modao.cc/agent-py/media/generated_images/2026-02-04/a55fae9d04fa47b383be512902d9f2b1.jpg',
-    tags: ['五星级', '江景房', '行政酒廊']
-  },
-
-  {
-    id: 2,
-    name: '和平饭店',
-    price: 1920,
-    rating: 4.8,
-    reviews: 2456,
-    image: 'https://modao.cc/agent-py/media/generated_images/2026-02-04/f3b3ec4f3810412ca44d6a60c5ae0652.jpg',
-    tags: ['历史建筑', '外滩景观', '老上海风情']
-  },
-  {
-    id: 3,
-    name: '养云安缦',
-    price: 4500,
-    rating: 4.9,
-    reviews: 892,
-    image: 'https://modao.cc/agent-py/media/generated_images/2026-02-04/d6da6cead0c74fa3bb26f2f684f5386a.jpg',
-    tags: ['奢华度假', '园林景观', '私密性佳']
-  },
-
-  {
-    id: 4,
-    name: '宝格丽酒店',
-    price: 3800,
-    rating: 4.9,
-    reviews: 1567,
-    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=500&q=80',
-    tags: ['奢华品牌', '城市景观', '高端服务']
-
-  }
-
-]
-
 
 // 热门城市数据
 const POPULAR_CITIES = [
@@ -123,6 +77,17 @@ export default function Index() {
     guests: 2,
     rooms: 1
   })
+
+  // 新增:推荐酒店列表
+  const [recommendHotels, setRecommendHotels] = useState([])
+  const [loadingRecommend, setLoadingRecommend] = useState(false)
+
+  // 新增:Banner酒店数据
+  const [bannerHotels, setBannerHotels] = useState([])
+
+  // 新增:热门城市动态数据
+  const [popularCities, setPopularCities] = useState(POPULAR_CITIES)
+  const [loadingCities, setLoadingCities] = useState(false)
 
   const [activeTag, setActiveTag] = useState(null)
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false)
@@ -151,17 +116,145 @@ export default function Index() {
   // 页面生命周期
   useLoad(() => {
     console.log('页面加载完成')
-    // 这里可以初始化数据，如获取用户位置、热门推荐等
     initPageData()
   })
 
   // 初始化页面数据
-  const initPageData = () => {
-    // 模拟API调用
+  const initPageData = async () => {
     setLoading(true)
-    setTimeout(() => {
+    try {
+      // 1. 获取IP定位
+      const locationRes = await request({ url: '/system/location', method: 'GET' })
+      if (locationRes.code === 200 && locationRes.data?.city) {
+        const detectedCity = locationRes.data.city
+        setCurrentCity(detectedCity)
+        setSearchParams(prev => ({ ...prev, city: detectedCity }))
+      }
+
+      // 2. 获取城市统计数据
+      await fetchCityStats()
+
+      // 3. 获取推荐酒店(当前城市前4条)
+      await fetchRecommendHotels(searchParams.city)
+
+      // 4. 获取Banner酒店(前3条高星酒店)
+      await fetchBannerHotels(searchParams.city)
+    } catch (error) {
+      console.error('初始化失败:', error)
+    } finally {
       setLoading(false)
-    }, 500)
+    }
+  }
+
+  // 获取Banner酒店
+  const fetchBannerHotels = async (city) => {
+    try {
+      const cleanCity = city.replace(/市$/, '')
+      // 优先获取5星级,如果不足3条则降级到4星
+      let res = await request({
+        url: '/hotel/list',
+        method: 'GET',
+        data: { city: cleanCity, limit: 3, star: 5 }
+      })
+      
+      let bannerList = res.code === 200 && res.data?.list ? res.data.list : []
+      
+      // 如果5星级不足3条,补充4星级酒店
+      if (bannerList.length < 3) {
+        const res4Star = await request({
+          url: '/hotel/list',
+          method: 'GET',
+          data: { city: cleanCity, limit: 3 - bannerList.length, star: 4 }
+        })
+        if (res4Star.code === 200 && res4Star.data?.list) {
+          bannerList = [...bannerList, ...res4Star.data.list]
+        }
+      }
+      
+      // 如果还不足,获取所有已发布酒店补充
+      if (bannerList.length < 3) {
+        const resAll = await request({
+          url: '/hotel/list',
+          method: 'GET',
+          data: { city: cleanCity, limit: 3 }
+        })
+        if (resAll.code === 200 && resAll.data?.list) {
+          const existingIds = bannerList.map(h => h.id)
+          const additional = resAll.data.list.filter(h => !existingIds.includes(h.id))
+          bannerList = [...bannerList, ...additional].slice(0, 3)
+        }
+      }
+
+      if (bannerList.length > 0) {
+        const formatted = bannerList.map((item, index) => {
+          const slogans = [
+            { tag: '限时特惠', tagClass: '', title: `${item.name} · 春季大促`, subtitle: '奢华享受，超值体验' },
+            { tag: '会员专享', tagClass: 'tag-premium', title: `${item.name} · 尊享升级`, subtitle: '白金会员免费升级豪华房型' },
+            { tag: '闪购特价', tagClass: 'tag-flash', title: `${item.name} · 周末特惠`, subtitle: '限时抢购，手慢无' }
+          ]
+          return {
+            id: item.id,
+            image: item.cover_image?.startsWith('http') ? item.cover_image : `http://localhost:3000${item.cover_image}`,
+            ...slogans[index % 3]
+          }
+        })
+        setBannerHotels(formatted)
+      }
+    } catch (error) {
+      console.error('获取Banner酒店失败:', error)
+    }
+  }
+
+  // 获取城市统计数据
+  const fetchCityStats = async () => {
+    setLoadingCities(true)
+    try {
+      const res = await request({
+        url: '/system/city-stats',
+        method: 'GET'
+      })
+      if (res.code === 200 && res.data?.cities) {
+        const formattedCities = res.data.cities.slice(0, 6).map((item, index) => ({
+          id: index + 1,
+          name: item.city,
+          hotels: item.count
+        }))
+        setPopularCities(formattedCities)
+      }
+    } catch (error) {
+      console.error('获取城市统计失败:', error)
+    } finally {
+      setLoadingCities(false)
+    }
+  }
+
+  // 获取推荐酒店
+  const fetchRecommendHotels = async (city) => {
+    setLoadingRecommend(true)
+    try {
+      const cleanCity = city.replace(/市$/, '')
+      const res = await request({
+        url: '/hotel/list',
+        method: 'GET',
+        data: { city: cleanCity, limit: 4, sort: 'price_desc' }
+      })
+      if (res.code === 200 && res.data?.list) {
+        const formatted = res.data.list.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: parseFloat(item.price),
+          rating: item.score, // 只使用后端真实评分，没有就不显示
+          reviews: item.reviews || 0, // 使用后端真实评价数
+          image: item.cover_image?.startsWith('http') ? item.cover_image : `http://localhost:3000${item.cover_image}`,
+          tags: Array.isArray(item.tags) ? item.tags.filter(t => !t.includes(':')).slice(0, 3) : []
+        }))
+        setRecommendHotels(formatted)
+      }
+    } catch (error) {
+      console.error('获取推荐酒店失败:', error)
+    } finally {
+      setLoadingRecommend(false)
+    }
   }
 
   const handleConfirmDate = (param) => {
@@ -371,7 +464,7 @@ export default function Index() {
           showScrollbar={false}
         >
           <View className="cities-container">
-            {POPULAR_CITIES.map(city => (
+            {popularCities.map(city => (
               <View
                 key={city.id}
                 className={`city-item ${currentCity.includes(city.name) ? 'active' : ''}`}
@@ -403,71 +496,46 @@ export default function Index() {
           className="banner-swiper"
           indicatorColor="#999"
           indicatorActiveColor="#3B82F6"
-          circular
+          circular={bannerHotels.length >= 2}
           indicatorDots
-          autoplay
+          autoplay={bannerHotels.length >= 2}
           interval={4000}
         >
-          <SwiperItem>
-            <View
-              className="banner-item"
-              onClick={() => navigateTo({ url: '/pages/promotion/index?id=1' })}
-            >
-              <Image
-                className="banner-image"
-                src="https://miaobi-lite.bj.bcebos.com/miaobi/5mao/b%275LiJ5LqaMTgw5bqm5rW35pmv6YWS5bqXXzE3MzA3NTcyOTkuMTk3MDIzNA%3D%3D%27/0.png"
-                mode="aspectFill"
-              />
-              <View className="banner-content">
-                {/* 修改：减小促销标签高度 */}
-                <View className="promotion-tag">
-                  <Text className="tag-text">限时特惠</Text>
+          {bannerHotels.length > 0 ? (
+            bannerHotels.map((banner, index) => (
+              <SwiperItem key={index}>
+                <View
+                  className="banner-item"
+                  onClick={() => {
+                    Taro.navigateTo({ 
+                      url: `/pages/detail/index?id=${banner.id}&checkIn=${searchParams.checkInDate}&checkOut=${searchParams.checkOutDate}` 
+                    })
+                  }}
+                >
+                  <Image
+                    className="banner-image"
+                    src={banner.image}
+                    mode="aspectFill"
+                  />
+                  <View className="banner-content">
+                    <View className={`promotion-tag ${banner.tagClass}`}>
+                      <Text className="tag-text">{banner.tag}</Text>
+                    </View>
+                    <Text className="banner-title">{banner.title}</Text>
+                    <Text className="banner-subtitle">{banner.subtitle}</Text>
+                  </View>
                 </View>
-                <Text className="banner-title">2026春季大促：海景房5折起</Text>
-                <Text className="banner-subtitle">感受呼吸间的海滨浪漫</Text>
-              </View>
-            </View>
-          </SwiperItem>
-
-          <SwiperItem>
-            <View
-              className="banner-item"
-              onClick={() => navigateTo({ url: '/pages/promotion/index?id=2' })}
-            >
-              <Image
-                className="banner-image"
-                src="https://digital.ihg.com.cn/is/image/ihg/crowne-plaza-lanzhou-7876381686-4x3"
-                mode="aspectFill"
-              />
-              <View className="banner-content">
-                <View className="promotion-tag tag-premium">
-                  <Text className="tag-text">会员专享</Text>
+              </SwiperItem>
+            ))
+          ) : (
+            <SwiperItem>
+              <View className="banner-item">
+                <View style={{ height: '180px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#f5f5f5' }}>
+                  <Text>加载中...</Text>
                 </View>
-                <Text className="banner-title">白金会员专享：房型免费升级</Text>
-                <Text className="banner-subtitle">尊享奢华住宿体验</Text>
               </View>
-            </View>
-          </SwiperItem>
-
-          <SwiperItem>
-            <View
-              className="banner-item"
-              onClick={() => navigateTo({ url: '/pages/promotion/index?id=3' })}
-            >
-              <Image
-                className="banner-image"
-                src="https://plus.unsplash.com/premium_photo-1661963123153-5471a95b7042?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                mode="aspectFill"
-              />
-              <View className="banner-content">
-                <View className="promotion-tag tag-flash">
-                  <Text className="tag-text">闪购</Text>
-                </View>
-                <Text className="banner-title">周末闪购：精品酒店299元起</Text>
-                <Text className="banner-subtitle">限时抢购，手慢无</Text>
-              </View>
-            </View>
-          </SwiperItem>
+            </SwiperItem>
+          )}
         </Swiper>
 
 
@@ -482,7 +550,7 @@ export default function Index() {
                 className="location-left"
                 onClick={() => setShowCityPicker(!showCityPicker)}
               >
-                <Text className="location-icon">📍</Text>
+                <Text className="location-label">位置: </Text>
                 <Text className="location-value">{searchParams.city}</Text>
               </View>
               <View
@@ -525,10 +593,9 @@ export default function Index() {
 
             {/* 关键词搜索 */}
             <View className="search-row keyword-row">
-              <Text className="search-icon">🔍</Text>
               <Input
                 className="search-input"
-                placeholder="关键字/位置/品牌/酒店名"
+                placeholder="🔍 关键字/位置/品牌/酒店名"
                 placeholderClass="placeholder"
                 value={searchParams.keyword}
                 onInput={(e) => setSearchParams(prev => ({
@@ -633,7 +700,6 @@ export default function Index() {
                   className={`tag-item ${activeTag === tag.id ? 'active' : ''}`}
                   onClick={() => handleTagClick(tag)}
                 >
-                  <Text className="tag-icon">{tag.icon}</Text>
                   <Text className="tag-label">{tag.label}</Text>
                 </View>
               ))}
@@ -641,20 +707,13 @@ export default function Index() {
           </ScrollView>
         </View>
 
-        {/* 最近浏览 */}
+        {/* 推荐酒店 */}
         <View className="recent-section">
           <View className="section-header">
             <View className="section-title-wrapper">
-              <Text className="section-title">最近看过</Text>
-              <Text className="section-badge">{RECENT_HOTELS.length}</Text>
+              <Text className="section-title">为您推荐</Text>
+              <Text className="section-badge">{recommendHotels.length}</Text>
             </View>
-
-            <Text
-             className="clear-history"
-             onClick={clearHistory}
-            >
-              清空历史
-            </Text>
           </View>
 
 
@@ -665,37 +724,50 @@ export default function Index() {
             showScrollbar={false}
           >
             <View className="hotels-container">
-              {RECENT_HOTELS.map(hotel => (
-                <View
-                  key={hotel.id}
-                  className="hotel-card"
-                  onClick={() => handleHotelClick(hotel)}
-                >
-                  <Image
-                    className="hotel-image"
-                    src={hotel.image}
-                    mode="aspectFill"
-                  />
-                  <View className="hotel-info">
-                    <Text className="hotel-name">{hotel.name}</Text>
-                    <View className="hotel-rating">
-                      <Text className="rating-star">⭐</Text>
-                      <Text className="rating-value">{hotel.rating}</Text>
-                      <Text className="rating-reviews">({hotel.reviews}条评价)</Text>
-                    </View>
-                    <View className="hotel-tags">
-                      {hotel.tags.slice(0, 2).map((tag, index) => (
-                        <Text key={index} className="hotel-tag">{tag}</Text>
-                      ))}
-                    </View>
-                    <View className="hotel-price">
-                      <Text className="price-symbol">¥</Text>
-                      <Text className="price-value">{hotel.price.toLocaleString()}</Text>
-                      <Text className="price-unit">起/晚</Text>
+              {loadingRecommend ? (
+                <View style={{ padding: '20px', textAlign: 'center' }}>
+                  <Text>加载中...</Text>
+                </View>
+              ) : recommendHotels.length > 0 ? (
+                recommendHotels.map(hotel => (
+                  <View
+                    key={hotel.id}
+                    className="hotel-card"
+                    onClick={() => handleHotelClick(hotel)}
+                  >
+                    <Image
+                      className="hotel-image"
+                      src={hotel.image}
+                      mode="aspectFill"
+                    />
+                    <View className="hotel-info">
+                      <Text className="hotel-name">{hotel.name}</Text>
+                      {hotel.rating && (
+                        <View className="hotel-rating">
+                          <Text className="rating-value">★ {hotel.rating}</Text>
+                          {hotel.reviews > 0 && (
+                            <Text className="rating-reviews">({hotel.reviews}条评价)</Text>
+                          )}
+                        </View>
+                      )}
+                      <View className="hotel-tags">
+                        {hotel.tags.slice(0, 2).map((tag, index) => (
+                          <Text key={index} className="hotel-tag">{tag}</Text>
+                        ))}
+                      </View>
+                      <View className="hotel-price">
+                        <Text className="price-symbol">¥</Text>
+                        <Text className="price-value">{hotel.price.toLocaleString()}</Text>
+                        <Text className="price-unit">起/晚</Text>
+                      </View>
                     </View>
                   </View>
+                ))
+              ) : (
+                <View style={{ padding: '20px', textAlign: 'center' }}>
+                  <Text>暂无推荐酒店</Text>
                 </View>
-              ))}
+              )}
            </View>
           </ScrollView>
         </View>
@@ -766,7 +838,6 @@ export default function Index() {
 
 
 
-      // 删除 Popup 包装，直接使用 Calendar 的弹窗模式
 {isCalendarVisible && (
   <Calendar
     visible={isCalendarVisible}
@@ -812,7 +883,7 @@ export default function Index() {
               </Text>
             </View>
             <ScrollView className="picker-list" scrollY>
-              {POPULAR_CITIES.map(city => (
+              {popularCities.map(city => (
 
                 <View
 

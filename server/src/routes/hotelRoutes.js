@@ -50,6 +50,13 @@ router.post('/delete',
   hotelController.deleteHotel
 );
 
+// 管理员恢复(上线)酒店
+router.post('/restore', 
+  authMiddleware, 
+  requireRole(['admin']), 
+  hotelController.restoreHotel
+);
+
 // === 房型管理 ===
 
 

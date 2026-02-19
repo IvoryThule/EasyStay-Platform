@@ -244,6 +244,29 @@ const deleteHotel = async (req, res) => {
   }
 };
 
+/**
+ * 恢复酒店 (管理员)
+ * POST /api/hotel/restore
+ * Body: { id: 1 }
+ */
+const restoreHotel = async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return fail(res, 'Hotel ID is required', 400);
+
+    const hotel = await Hotel.findByPk(id);
+    if (!hotel) return fail(res, 'Hotel not found', 404);
+
+    // 恢复：设置 status = 1 (已发布)
+    await hotel.update({ status: 1 });
+
+    success(res, hotel, 'Hotel restored successfully');
+  } catch (error) {
+    console.error('Restore Hotel Error:', error);
+    fail(res, 'Failed to restore hotel', 500);
+  }
+};
+
 // ================= 房型管理 (RoomType) =================
 
 /**
@@ -401,6 +424,7 @@ module.exports = {
   getDetail,
   update,
   deleteHotel,
+  restoreHotel,
 
   getRoomTypeList,
   getRoomTypeDetail,

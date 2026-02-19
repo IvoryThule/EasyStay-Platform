@@ -122,7 +122,7 @@ exports.recommend = async (req, res) => {
 
     // 让AI基于这些酒店做智能推荐
     const message = `请根据以下需求为用户推荐最合适的3家酒店：
-- 目的地: ${city || '不限'}
+- : ${city || '不限'}
 - 预算: ${budget ? `${budget}元/晚以内` : '不限'}
 - 出行目的: ${purpose || '休闲旅游'}
 - 偏好标签: ${tags.length > 0 ? tags.join('、') : '无特殊偏好'}

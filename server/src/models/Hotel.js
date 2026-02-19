@@ -32,7 +32,8 @@ const Hotel = sequelize.define('Hotel', {
   },
   tags: {
     type: DataTypes.JSON, // MySQL 支持 JSON 类型
-    defaultValue: []
+    defaultValue: [],
+    comment: '标签数组,支持: 1)普通标签字符串 2)EN:英文名 3)OPENING:开业日期 4)IMAGES:多图数组JSON 5)ROOMDATA:房型数据'
   },
   cover_image: {
     type: DataTypes.STRING

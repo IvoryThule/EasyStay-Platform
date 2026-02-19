@@ -5,6 +5,8 @@
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100vw;
   height: 100vh;
   pointer-events: none; /* 关键：允许点击下方的页面内容 */

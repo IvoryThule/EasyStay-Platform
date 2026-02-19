@@ -189,16 +189,28 @@ const HotelDetail = () => {
 
     <View className='info-card'>
      <Text className='name'>{hotelInfo?.name}</Text>
-     <View className='address-bar'>📍 {hotelInfo?.address}</View>
+     {/* 新增:星级显示 */}
+     {hotelInfo?.star && (
+       <View className='star-bar'>
+         <Text className='star-text'>{'★'.repeat(hotelInfo.star)}</Text>
+         <Text className='star-label'>{hotelInfo.star}星级酒店</Text>
+       </View>
+     )}
+     <View className='address-bar'>位置: {hotelInfo?.address}</View>
 
      {/* 修复点 2：设施列表 map 保护 */}
-     <ScrollView scrollX className='facility-scroll'>
-      {(hotelInfo?.displayFacilities || []).map((f, idx) => (
-       <View key={idx} className='facility-item'>
-        <Text className='f-name'>{typeof f === 'string' ? f : f.name}</Text>
-       </View>
-      ))}
-     </ScrollView>
+     {hotelInfo?.displayFacilities && hotelInfo.displayFacilities.length > 0 && (
+       <>
+         <View className='section-title'>酒店设施</View>
+         <ScrollView scrollX className='facility-scroll'>
+           {hotelInfo.displayFacilities.map((f, idx) => (
+             <View key={idx} className='facility-item'>
+               <Text className='f-name'>{typeof f === 'string' ? f : f.name}</Text>
+             </View>
+           ))}
+         </ScrollView>
+       </>
+     )}
     </View>
 
     <View className='calendar-bar' onClick={() => setIsVisible(true)}>

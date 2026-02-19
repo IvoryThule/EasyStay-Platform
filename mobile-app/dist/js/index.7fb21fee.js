@@ -1,1 +1,0 @@
-import{t as s,v as e,V as a,T as o}from"./vendors.f0b839a9.js";function n(){return s.useLoad(function(){console.log("Page loaded.")}),e.jsx(a,{className:"index",children:e.jsx(o,{children:"\u6211\u7684\u5185\u5bb9"})})}export{n as default};

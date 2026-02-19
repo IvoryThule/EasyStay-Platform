@@ -1,7 +1,7 @@
-﻿import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Row, Col, Card, Statistic, Button, Typography, Space, 
-  Tag, Progress, Segmented, List, Avatar, Divider, Badge
+  Tag, Progress, Segmented, List, Avatar, Divider, Badge, Spin
 } from 'antd'; // 已补全 Badge
 import { 
   RiseOutlined, ThunderboltOutlined, CheckCircleOutlined, 
@@ -13,6 +13,7 @@ import {
   Bar, PieChart, Pie, Cell, Legend, ComposedChart, Line, Radar, RadarChart, 
   PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
+import request from '../utils/request';
 
 const { Title, Text } = Typography;
 
@@ -28,33 +29,47 @@ const THEME = {
 
 const CHART_COLORS = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ec4899'];
 
-// --- 丰富的数据源 ---
-const TREND_DATA = [
-  { name: '02-01', revenue: 4500, orders: 120, satisfaction: 85 },
-  { name: '02-02', revenue: 5200, orders: 150, satisfaction: 88 },
-  { name: '02-03', revenue: 3800, orders: 100, satisfaction: 82 },
-  { name: '02-04', revenue: 6500, orders: 220, satisfaction: 90 },
-  { name: '02-05', revenue: 4800, orders: 140, satisfaction: 86 },
-  { name: '02-06', revenue: 5900, orders: 180, satisfaction: 92 },
-  { name: '02-07', revenue: 7200, orders: 250, satisfaction: 95 },
-];
-
-const CHANNEL_DISTRIBUTION = [
-  { name: '携程分销', value: 400 },
-  { name: '美团直连', value: 300 },
-  { name: '易宿直营', value: 200 },
-  { name: '飞猪官网', value: 100 },
-];
-
-const PERFORMANCE_RADAR = [
-  { subject: '卫生', A: 120, full: 150 },
-  { subject: '服务', A: 98, full: 150 },
-  { subject: '设施', A: 86, full: 150 },
-  { subject: '性价比', A: 99, full: 150 },
-  { subject: '位置', A: 85, full: 150 },
-];
-
 const Dashboard = () => {
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const res = await request.get('/admin/dashboard');
+      setDashboardData(res.data);
+    } catch (error) {
+      console.error('获取看板数据失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ background: THEME.bg, minHeight: '100vh', padding: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Spin size="large" tip="加载数据中..." />
+      </div>
+    );
+  }
+
+  const { overview, trend, channelDist, hotelStats } = dashboardData || { 
+    overview: {}, 
+    trend: [], 
+    channelDist: [],
+    hotelStats: {}
+  };
+
+  // 格式化趋势数据 - 使用后端真实数据
+  const trendDataFormatted = trend || [];
+
+  // 格式化渠道分布数据 - 使用后端真实数据
+  const channelDataFormatted = channelDist || [];
+
   return (
     <div style={{ background: THEME.bg, minHeight: '100vh', padding: '24px' }}>
       
@@ -70,17 +85,17 @@ const Dashboard = () => {
         </Space>
         <Space>
           <Button icon={<DownloadOutlined />}>导出报告</Button>
-          <Button type="primary" icon={<FilterOutlined />}>高级筛选</Button>
+          <Button type="primary" icon={<FilterOutlined />} onClick={fetchDashboardData}>刷新数据</Button>
         </Space>
       </div>
 
       {/* 核心指标卡片  */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {[
-          { label: '预订订单数', value: '1,640', trend: '+12.5%', color: THEME.primary },
-          { label: '间夜量', value: '1,914', trend: '+5.2%', color: THEME.success },
-          { label: '销售额 (RMB)', value: '19.70万', trend: '+8.1%', color: THEME.text },
-          { label: '平均转化率', value: '14.2%', trend: '-1.2%', color: THEME.warning },
+          { label: '预订订单数', value: overview.totalOrders || 0, trend: '+12.5%', color: THEME.primary },
+          { label: '间夜量', value: overview.totalNights || 0, trend: '+5.2%', color: THEME.success },
+          { label: '销售额 (RMB)', value: `${(parseFloat(overview.totalRevenue || 0) / 10000).toFixed(2)}万`, trend: '+8.1%', color: THEME.text },
+          { label: '平均转化率', value: overview.avgConversionRate || '0%', trend: '-1.2%', color: THEME.warning },
         ].map((item, i) => (
           <Col xs={24} sm={12} lg={6} key={i}>
             <Card variant="borderless" style={{ borderRadius: 12 }}>
@@ -115,7 +130,7 @@ const Dashboard = () => {
             {/* 设定了具体高度的容器*/}
             <div style={{ width: '100%', height: 400, minHeight: 400 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={TREND_DATA} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <ComposedChart data={trendDataFormatted} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
@@ -130,19 +145,44 @@ const Dashboard = () => {
           </Card>
         </Col>
 
-        {/* 右侧：雷达图表 (专业表现分析) */}
+        {/* 右侧:酒店状态分布 */}
         <Col xs={24} xl={8}>
-          <Card title="服务表现维度" variant="borderless" style={{ borderRadius: 12, height: '100%' }}>
-            <div style={{ width: '100%', height: 400, minHeight: 400 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={PERFORMANCE_RADAR}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 12 }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 150]} axisLine={false} tick={false} />
-                  <Radar name="当前评分" dataKey="A" stroke={THEME.primary} fill={THEME.primary} fillOpacity={0.5} />
-                  <Tooltip />
-                </RadarChart>
-              </ResponsiveContainer>
+          <Card title="酒店状态统计" variant="borderless" style={{ borderRadius: 12, height: '100%' }}>
+            <div style={{ padding: '20px 0' }}>
+              <Row gutter={[16, 24]}>
+                <Col span={12}>
+                  <Statistic 
+                    title="已发布" 
+                    value={hotelStats?.published || 0} 
+                    valueStyle={{ color: THEME.success, fontSize: 32 }} 
+                    prefix="🟢"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic 
+                    title="审核中" 
+                    value={hotelStats?.pending || 0} 
+                    valueStyle={{ color: THEME.warning, fontSize: 32 }}
+                    prefix="🟡"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic 
+                    title="已驳回" 
+                    value={hotelStats?.rejected || 0} 
+                    valueStyle={{ color: THEME.error, fontSize: 32 }}
+                    prefix="🔴"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic 
+                    title="已下线" 
+                    value={hotelStats?.offline || 0} 
+                    valueStyle={{ color: '#94a3b8', fontSize: 32 }}
+                    prefix="⚫"
+                  />
+                </Col>
+              </Row>
             </div>
           </Card>
         </Col>
@@ -156,13 +196,13 @@ const Dashboard = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={CHANNEL_DISTRIBUTION}
+                    data={channelDataFormatted}
                     innerRadius={70}
                     outerRadius={90}
                     paddingAngle={8}
                     dataKey="value"
                   >
-                    {CHANNEL_DISTRIBUTION.map((entry, index) => (
+                    {channelDataFormatted.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                   </Pie>
