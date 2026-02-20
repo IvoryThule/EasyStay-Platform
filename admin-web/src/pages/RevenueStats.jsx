@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Card, Row, Col, Statistic, Typography, Spin, Alert } from 'antd'
+import { Alert, Card, Col, Row, Spin, Statistic, Typography } from 'antd'
 import {
   ResponsiveContainer,
   LineChart,
@@ -20,9 +20,9 @@ import request from '../utils/request'
 const { Title } = Typography
 
 const ORDER_STATUS_MAP = {
-  0: '待支付',
-  1: '已预订',
-  2: '已取消'
+  0: 'Pending',
+  1: 'Booked',
+  2: 'Canceled'
 }
 
 const COLORS = ['#1677ff', '#13c2c2', '#faad14', '#ff7875', '#722ed1']
@@ -30,6 +30,7 @@ const COLORS = ['#1677ff', '#13c2c2', '#faad14', '#ff7875', '#722ed1']
 const RevenueStats = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [warning, setWarning] = useState('')
   const [dashboardData, setDashboardData] = useState(null)
   const [platformStats, setPlatformStats] = useState(null)
 
@@ -40,27 +41,65 @@ const RevenueStats = () => {
   const fetchData = async () => {
     setLoading(true)
     setError('')
+    setWarning('')
+
+    let dashData = null
+    let statsData = null
+    let dashboardError = null
+
     try {
       const dashboardRes = await request.get('/admin/dashboard')
       if (dashboardRes.code === 200) {
-        setDashboardData(dashboardRes.data)
+        dashData = dashboardRes.data
       } else {
-        throw new Error(dashboardRes.msg || '获取营收数据失败')
-      }
-
-      try {
-        const statsRes = await request.get('/admin/stats')
-        if (statsRes.code === 200) {
-          setPlatformStats(statsRes.data)
-        }
-      } catch {
-        setPlatformStats(null)
+        throw new Error(dashboardRes.msg || 'Failed to fetch dashboard data')
       }
     } catch (e) {
-      setError(e.message || '获取营收数据失败')
-    } finally {
-      setLoading(false)
+      dashboardError = e
     }
+
+    try {
+      const statsRes = await request.get('/admin/stats')
+      if (statsRes.code === 200) {
+        statsData = statsRes.data
+      }
+    } catch {
+      statsData = null
+    }
+
+    if (!dashData && statsData) {
+      dashData = {
+        overview: {
+          totalOrders: statsData.orders || 0,
+          totalNights: statsData.paidOrders || 0,
+          totalRevenue: 0,
+          avgConversionRate: '0%'
+        },
+        hotelStats: {
+          published: statsData.hotels || 0,
+          pending: statsData.pendingHotels || 0,
+          rejected: 0,
+          offline: 0
+        },
+        trend: [],
+        channelDist: [],
+        orderStatusDist: [
+          { status: 0, count: Math.max((statsData.orders || 0) - (statsData.paidOrders || 0), 0) },
+          { status: 1, count: statsData.paidOrders || 0 }
+        ]
+      }
+      setWarning('Dashboard API failed. Showing fallback data from platform stats.')
+    }
+
+    if (!dashData) {
+      setError(dashboardError?.message || 'Failed to fetch revenue stats')
+      setDashboardData(null)
+    } else {
+      setDashboardData(dashData)
+    }
+
+    setPlatformStats(statsData)
+    setLoading(false)
   }
 
   const trendData = useMemo(() => {
@@ -74,7 +113,7 @@ const RevenueStats = () => {
 
   const orderStatusData = useMemo(() => {
     return (dashboardData?.orderStatusDist || []).map((item) => ({
-      name: ORDER_STATUS_MAP[item.status] || `状态${item.status}`,
+      name: ORDER_STATUS_MAP[item.status] || `Status ${item.status}`,
       value: Number(item.count || 0)
     }))
   }, [dashboardData])
@@ -82,38 +121,39 @@ const RevenueStats = () => {
   if (loading) {
     return (
       <div style={{ minHeight: 420, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Spin size='large' tip='营收数据加载中...' />
+        <Spin size='large' tip='Loading revenue stats...' />
       </div>
     )
   }
 
   if (error) {
-    return <Alert type='error' message='加载失败' description={error} showIcon />
+    return <Alert type='error' message='Load failed' description={error} showIcon />
   }
 
   return (
     <div>
-      <Title level={4} style={{ marginBottom: 16 }}>营收统计</Title>
+      <Title level={4} style={{ marginBottom: 16 }}>Revenue Stats</Title>
+      {warning ? <Alert type='warning' showIcon message={warning} style={{ marginBottom: 16 }} /> : null}
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title='总订单数' value={dashboardData?.overview?.totalOrders || 0} />
+            <Statistic title='Total Orders' value={dashboardData?.overview?.totalOrders || 0} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title='总间夜' value={dashboardData?.overview?.totalNights || 0} />
+            <Statistic title='Total Nights' value={dashboardData?.overview?.totalNights || 0} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title='总营收 (RMB)' value={Number(dashboardData?.overview?.totalRevenue || 0)} precision={2} />
+            <Statistic title='Total Revenue (RMB)' value={Number(dashboardData?.overview?.totalRevenue || 0)} precision={2} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic title='平均转化率' value={dashboardData?.overview?.avgConversionRate || '0%'} />
+            <Statistic title='Avg Conversion' value={dashboardData?.overview?.avgConversionRate || '0%'} />
           </Card>
         </Col>
       </Row>
@@ -121,23 +161,23 @@ const RevenueStats = () => {
       {platformStats ? (
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} lg={6}>
-            <Card><Statistic title='平台用户数' value={platformStats.users || 0} /></Card>
+            <Card><Statistic title='Users' value={platformStats.users || 0} /></Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card><Statistic title='商家数' value={platformStats.merchants || 0} /></Card>
+            <Card><Statistic title='Merchants' value={platformStats.merchants || 0} /></Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card><Statistic title='已发布酒店' value={platformStats.hotels || 0} /></Card>
+            <Card><Statistic title='Published Hotels' value={platformStats.hotels || 0} /></Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card><Statistic title='待审核酒店' value={platformStats.pendingHotels || 0} /></Card>
+            <Card><Statistic title='Pending Hotels' value={platformStats.pendingHotels || 0} /></Card>
           </Col>
         </Row>
       ) : null}
 
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={14}>
-          <Card title='近7日营收与订单趋势'>
+          <Card title='7-Day Trend'>
             <div style={{ width: '100%', height: 320 }}>
               <ResponsiveContainer>
                 <LineChart data={trendData}>
@@ -146,8 +186,8 @@ const RevenueStats = () => {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Line type='monotone' dataKey='revenue' name='营收' stroke='#1677ff' strokeWidth={2} />
-                  <Line type='monotone' dataKey='orders' name='订单量' stroke='#13c2c2' strokeWidth={2} />
+                  <Line type='monotone' dataKey='revenue' name='Revenue' stroke='#1677ff' strokeWidth={2} />
+                  <Line type='monotone' dataKey='orders' name='Orders' stroke='#13c2c2' strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -155,7 +195,7 @@ const RevenueStats = () => {
         </Col>
 
         <Col xs={24} xl={10}>
-          <Card title='渠道贡献分布'>
+          <Card title='Channel Distribution'>
             <div style={{ width: '100%', height: 320 }}>
               <ResponsiveContainer>
                 <PieChart>
@@ -175,7 +215,7 @@ const RevenueStats = () => {
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col span={24}>
-          <Card title='订单状态分布'>
+          <Card title='Order Status Distribution'>
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer>
                 <BarChart data={orderStatusData}>

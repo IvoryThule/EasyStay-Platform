@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { View, Text, Input } from '@tarojs/components'
-import Taro, { useRouter } from '@tarojs/taro'
+import Taro, { useDidShow, useRouter } from '@tarojs/taro'
 import request from '../../utils/request'
 import './index.scss'
 
@@ -14,7 +14,7 @@ const TAB_PAGES = [
 export default function LoginPage() {
   const router = useRouter()
   const redirectUrl = useMemo(() => {
-    const raw = router?.params?.redirect || '/pages/user/index'
+    const raw = router?.params?.redirect || '/pages/order/index'
     try {
       return decodeURIComponent(raw)
     } catch {
@@ -28,6 +28,25 @@ export default function LoginPage() {
     username: '',
     password: '',
     confirmPassword: ''
+  })
+
+  const navigateAfterAuth = async (target) => {
+    if (TAB_PAGES.includes(target)) {
+      try {
+        await Taro.switchTab({ url: target })
+        return
+      } catch {
+        // some runtimes may still treat target as non-tab before restart
+      }
+    }
+    Taro.redirectTo({ url: target }).catch(() => Taro.switchTab({ url: '/pages/order/index' }))
+  }
+
+  useDidShow(() => {
+    const token = Taro.getStorageSync('token')
+    if (token) {
+      navigateAfterAuth(redirectUrl)
+    }
   })
 
   const submit = async () => {
@@ -75,12 +94,7 @@ export default function LoginPage() {
         Taro.setStorageSync('token', loginRes.data.token)
         Taro.setStorageSync('userInfo', loginRes.data.user)
         Taro.showToast({ title: mode === 'register' ? '注册并登录成功' : '登录成功', icon: 'success' })
-
-        if (TAB_PAGES.includes(redirectUrl)) {
-          Taro.switchTab({ url: redirectUrl })
-        } else {
-          Taro.redirectTo({ url: redirectUrl }).catch(() => Taro.switchTab({ url: '/pages/user/index' }))
-        }
+        navigateAfterAuth(redirectUrl)
       } else {
         Taro.showToast({ title: loginRes.msg || '登录失败', icon: 'none' })
       }
