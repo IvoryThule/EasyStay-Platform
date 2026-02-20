@@ -14,14 +14,22 @@ export default function AiFloatBall() {
   const [scrollId, setScrollId] = useState('')
 
   // 获取屏幕信息用于定位初始位置
-  const [initPos, setInitPos] = useState({ x: 0, y: 500 })
+  // 初始值给一个大概的右侧位置，防止useEffect延迟导致先闪现到左边
+  const [initPos, setInitPos] = useState({ x: 300, y: 500 })
 
   useEffect(() => {
-    const sys = Taro.getSystemInfoSync()
-    setInitPos({
-      x: sys.windowWidth - 70, // 靠右，留 70px 边距
-      y: sys.windowHeight - 160 // 靠下且避开 TabBar
-    })
+    try {
+      const sys = Taro.getSystemInfoSync()
+      // 确保获取到了有效的宽高
+      if (sys.windowWidth && sys.windowHeight) {
+        setInitPos({
+          x: sys.windowWidth - 80, // 靠右，留 80px 边距 (60px球体+20px间隙)
+          y: sys.windowHeight - 160 // 靠下且避开 TabBar
+        })
+      }
+    } catch (e) {
+      console.error('获取系统信息失败', e)
+    }
   }, [])
 
   const handleSend = async () => {

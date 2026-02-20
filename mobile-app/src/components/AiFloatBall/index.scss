@@ -16,6 +16,11 @@
     width: 60PX;
     height: 60PX;
     pointer-events: auto; /* 关键：恢复球体和窗口的交互 */
+    /* 修复：确保默认在右下角，防止 JS 计算延迟导致跑偏 */
+    position: fixed;
+    right: 20PX;
+    bottom: 100PX;
+    z-index: 10000;
   }
 
   .float-ball {
@@ -34,8 +39,8 @@
   /* 聊天窗口加大 */
   .chat-window {
     position: absolute;
-    bottom: 70PX; /* 位于球体上方 */
-    right: 0;
+    bottom: 80PX; /* 位于球体上方, 同时也避开手指遮挡 */
+    right: 0;     /* 关键修复：从自身右边缘向左延伸，对齐父容器右侧 */
     width: 85vw;   /* 宽度改为屏幕比例，更大 */
     height: 60vh;  /* 高度改为屏幕比例 */
     background: #ffffff;
@@ -45,6 +50,9 @@
     box-shadow: 0 10PX 30PX rgba(0, 0, 0, 0.3);
     overflow: hidden;
     border: 1PX solid #e5e7eb;
+    /* 解决可能的挤压问题 */
+    min-width: 300PX;
+    z-index: 10001; 
 
     .chat-header {
       padding: 14PX 16PX;

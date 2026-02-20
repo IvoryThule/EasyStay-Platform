@@ -119,8 +119,10 @@ EasyStay 是一个连接酒店商家与消费者的智能预订平台，提供�
 
 ## 注意事项
 - 不提供具体酒店价格（价格实时变动）
+- 严禁通过你的通用知识推荐具体的酒店名单，只针对用户提供的上下文或系统检索到的数据进行回答。
+- 如果没有检索到酒店数据，请引导用户使用搜索功能，不要自己编造推荐。
 - 不代替用户做最终预订决策
-- 遇到投诉升级需求，引导联系人工客服`
+- 遇到投诉升级需求，引导联系人工客服`,
     };
   }
 
@@ -284,14 +286,18 @@ ${this.SYSTEM_PROMPTS.GENERAL_ASSISTANT}
     // 如果有真实的酒店数据，注入到提示词中
     if (availableHotels && availableHotels.length > 0) {
       systemPrompt += `\n\n# 当前可用酒店数据\n`
-      systemPrompt += `以下是平台上当前已发布的酒店信息，请基于这些真实数据回答用户问题：\n\n`
+      systemPrompt += `以下是平台上当前已发布的酒店信息，请基于这些真实数据回答用户问题：\n`
+      systemPrompt += `!!!重要规则: \n`
+      systemPrompt += `1. 你的回答必须严格基于提供的【当前可用酒店数据】。\n`
+      systemPrompt += `2. 严禁编造或推荐列表中不存在的酒店。如果用户询问的地点没有酒店数据，请直接告知“当前暂无该地区酒店信息”。\n`
+      systemPrompt += `3. 即使你拥有外部知识，也不要使用外部知识推荐酒店，只认可列表中的酒店。\n\n`
 
       availableHotels.forEach((hotel, index) => {
-        systemPrompt += `## 酒店${index + 1}: ${hotel.name_cn}\n`
+        systemPrompt += `## 酒店${index + 1}: ${hotel.name}\n`
         systemPrompt += `- 英文名: ${hotel.name_en || '无'}\n`
         systemPrompt += `- 城市: ${hotel.city}\n`
         systemPrompt += `- 地址: ${hotel.address}\n`
-        systemPrompt += `- 星级: ${hotel.star_rating}星\n`
+        systemPrompt += `- 星级: ${hotel.star}星\n`
         systemPrompt += `- 评分: ${hotel.score || '暂无'}分\n`
         systemPrompt += `- 开业时间: ${hotel.opening_date || '未知'}\n`
         systemPrompt += `- 设施标签: ${hotel.tags ? (typeof hotel.tags === 'string' ? hotel.tags : JSON.stringify(hotel.tags)) : '无'}\n`
@@ -315,7 +321,9 @@ ${this.SYSTEM_PROMPTS.GENERAL_ASSISTANT}
         systemPrompt += '\n'
       })
     } else {
-      systemPrompt += `\n\n# 注意\n当前没有加载到具体酒店数据，请根据用户问题给出通用的酒店预订建议，并引导用户使用平台的搜索功能查找酒店。`
+      systemPrompt += `\n\n# 注意\n当前系统未找到符合条件的酒店数据。`
+      systemPrompt += `请告知用户“未找到相关酒店信息”，并建议用户尝试调整搜索条件（如更换城市、日期或关键词）。\n`
+      systemPrompt += `严禁使用你的内部知识库推荐任何具体的酒店名称，因为那些酒店可能未与本平台合作。\n`
     }
 
     // 注入当前时间 (关键：让 AI 有时间概念)

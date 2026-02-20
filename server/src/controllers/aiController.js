@@ -45,7 +45,7 @@ exports.chat = async (req, res) => {
           attributes: ['name', 'area', 'bed_type', 'price', 'breakfast']
         }],
         limit: 10,  // 限制数量，避免token超限
-        order: [['score', 'DESC']]
+        order: [['star', 'DESC']]
       })
     } catch (dbError) {
       console.error('查询酒店数据失败:', dbError.message)
@@ -109,7 +109,7 @@ exports.recommend = async (req, res) => {
         attributes: ['name', 'price', 'bed_type', 'breakfast']
       }],
       limit: 15,
-      order: [['score', 'DESC']]
+      order: [['star', 'DESC']]
     })
 
     // 如果有预算限制，过滤
@@ -138,10 +138,10 @@ exports.recommend = async (req, res) => {
       reply: result.reply,
       hotels: hotels.slice(0, 3).map(h => ({
         id: h.id,
-        name: h.name_cn,
+        name: h.name, // Fixed: name_cn -> name
         city: h.city,
-        star_rating: h.star_rating,
-        score: h.score,
+        star_rating: h.star, // Fixed: star_rating -> star
+        score: h.star, // Fallback score to star rating since score column missing
         min_price: Math.min(...(h.roomTypes || []).map(r => r.price || 0))
       }))
     })
