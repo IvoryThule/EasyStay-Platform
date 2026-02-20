@@ -6,28 +6,9 @@ const { success, fail } = require('../utils/response');
 
 /**
  * AI 通用问答接口 & 智能助手接口
- * 支持两种模式：
- * 1. 新版助手: Body: { message: "...", history: [], context: {} } -> 路由到 aiController
- * 2. 旧版通用: Body: { prompt: "...", mode: "..." } -> 保持原有逻辑
+ * 统一走 aiController.chat，兼容 message/prompt 两种请求体
  */
-router.post('/chat', async (req, res) => {
-    // 优先处理新版 AI 助手请求
-    if (req.body.message !== undefined || req.body.history !== undefined) {
-        return aiController.chat(req, res);
-    }
-
-    // 旧版逻辑保持不变
-    try {
-        const { prompt, mode = 'GENERAL_ASSISTANT' } = req.body;
-        if (!prompt) return fail(res, 'Prompt is required', 400);
-
-        // 注意：GLMService 现在导出的 generateText 实际上是实例方法的封装，用法不变
-        const result = await GLMService.generateText(prompt, mode);
-        success(res, { content: result });
-    } catch (error) {
-        fail(res, error.message, 500);
-    }
-});
+router.post('/chat', aiController.chat);
 
 /**
  * 智能推荐接口

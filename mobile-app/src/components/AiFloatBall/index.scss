@@ -1,165 +1,19 @@
-﻿/* [样式] AI 悬浮球样式 */
-/* 待实现。 */
-
-.ai-movable-area {
+.ai-float-ball {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none; /* 关键：允许点击下方的页面内容 */
-  z-index: 9999;
+  right: 24rpx;
+  bottom: 160rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12rpx 28rpx rgba(37, 99, 235, 0.35);
+  z-index: 99;
 
-  .float-ball-wrapper {
-    width: 60PX;
-    height: 60PX;
-    pointer-events: auto; /* 关键：恢复球体和窗口的交互 */
-    /* 修复：确保默认在右下角，防止 JS 计算延迟导致跑偏 */
-    position: fixed;
-    right: 20PX;
-    bottom: 100PX;
-    z-index: 10000;
-  }
-
-  .float-ball {
-    width: 60PX;
-    height: 60PX;
-    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4PX 16PX rgba(0, 0, 0, 0.25);
-    font-size: 28PX;
-    cursor: move;
-  }
-
-  /* 聊天窗口加大 */
-  .chat-window {
-    position: absolute;
-    bottom: 80PX; /* 位于球体上方, 同时也避开手指遮挡 */
-    right: 0;     /* 关键修复：从自身右边缘向左延伸，对齐父容器右侧 */
-    width: 85vw;   /* 宽度改为屏幕比例，更大 */
-    height: 60vh;  /* 高度改为屏幕比例 */
-    background: #ffffff;
-    border-radius: 16PX;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 10PX 30PX rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-    border: 1PX solid #e5e7eb;
-    /* 解决可能的挤压问题 */
-    min-width: 300PX;
-    z-index: 10001; 
-
-    .chat-header {
-      padding: 14PX 16PX;
-      background: #F8FAFC;
-      border-bottom: 1PX solid #F1F5F9;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      .title { font-weight: 600; color: #1E293B; font-size: 16PX; }
-      .close { color: #64748B; font-size: 20PX; padding: 4PX; }
-    }
-
-    .message-list {
-      flex: 1;
-      padding: 16PX; /* 这是容器的基础内边距，决定了气泡距离左右边框的最小距离 */
-      background: #F1F5F9;
-      
-      .msg-item {
-
-        margin-bottom: 16PX;
-        display: flex;
-        width: 100%; /* 确保容器占满全宽 */
-        box-sizing: border-box;
-
-        /* AI 消息靠左 */
-        &.ai {
-          justify-content: flex-start;
-          .msg-bubble {
-            /* 如果希望长消息距离右边也有同样的 16PX，这里 max-width 需要计算 */
-            max-width: 90%; 
-            background: #FFFFFF;
-            color: #334155;
-            border-bottom-left-radius: 2PX;
-          }
-        }
-
-        /* 用户消息靠右 */
-        &.user {
-          justify-content: flex-end;
-          padding-right: 24PX;
-          .msg-bubble {
-            max-width: 90%;
-            background: #3B82F6;
-            color: #FFFFFF;
-            border-bottom-right-radius: 2PX;
-          }
-        }
-
-    .msg-bubble {
-      padding: 10PX 14PX;
-      border-radius: 12PX;
-      font-size: 14PX;
-      line-height: 1.6;
-      /* 核心：确保文本换行，不撑破布局 */
-      word-wrap: break-word;
-      word-break: break-all;
-      box-sizing: border-box; 
-    }
-  }
-}
-
-    /* 发送按钮在输入框下方的布局 */
-    .chat-input-area {
-      padding: 12PX 16PX;
-      background: #FFFFFF;
-      display: flex;
-      flex-direction: row;
-      align-items: center; // 确保容器内的子元素（Input和Button）垂直居中对齐
-      gap: 10PX;
-
-      .input {
-        flex: 1;
-        /* 核心修改：高度与行高保持一致实现垂直居中 */
-        height: 40PX; 
-        line-height: 40PX; 
-        min-height: 40PX; // 覆盖小程序默认的最小高度
-        
-        background: #F8FAFC;
-        border: 1PX solid #E2E8F0;
-        border-radius: 8PX;
-        padding: 0 12PX;
-        box-sizing: border-box;
-        font-size: 14PX;
-        display: block; // 确保它是块级显示
-      }
-      
-      .send-btn {
-        width: auto;
-        min-width: 70PX;
-        height: 40PX; // 与输入框高度保持一致，视觉更整齐
-        line-height: 40PX;
-        background: #3B82F6;
-        color: #FFFFFF;
-        font-size: 13PX;
-        border-radius: 8PX;
-        margin: 0;
-        padding: 0 12PX;
-        flex-shrink: 0;
-        
-        /* 确保按钮内的文字也是居中的 */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        &::after { border: none; }
-        &:active { opacity: 0.8; }
-      }
-    }
+  &__icon {
+    font-size: 48rpx;
+    line-height: 1;
   }
 }
