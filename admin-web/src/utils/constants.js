@@ -12,8 +12,11 @@ export const STORAGE_KEYS = {
 export const ROUTE_PATHS = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
+  REVENUE_STATS: '/revenue-stats',
+  PROFILE_CENTER: '/profile-center',
+  SYSTEM_SETTINGS: '/system-settings',
   HOTEL_AUDIT: '/hotel-audit',
   HOTEL_EDIT: '/hotel-edit',
-  HOTEL_STATUS: '/hotel-status', // 商家查看列表
+  HOTEL_STATUS: '/hotel/status', // 商家查看列表
   REGISTER: '/register'
 };

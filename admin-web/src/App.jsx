@@ -9,6 +9,9 @@ import Dashboard from './pages/Dashboard'
 import HotelEdit from './pages/HotelEdit'
 import HotelAudit from './pages/HotelAudit'
 import HotelStatus from './pages/HotelStatus' 
+import RevenueStats from './pages/RevenueStats'
+import ProfileCenter from './pages/ProfileCenter'
+import SystemSettings from './pages/SystemSettings'
 import { ROUTE_PATHS } from './utils/constants'
 import './App.css'
 
@@ -28,12 +31,15 @@ function App() {
         }>
           <Route index element={<Navigate to={ROUTE_PATHS.DASHBOARD} replace />} />
           <Route path={ROUTE_PATHS.DASHBOARD} element={<Dashboard />} />
+          <Route path={ROUTE_PATHS.REVENUE_STATS} element={<RevenueStats />} />
+          <Route path={ROUTE_PATHS.PROFILE_CENTER} element={<ProfileCenter />} />
+          <Route path={ROUTE_PATHS.SYSTEM_SETTINGS} element={<SystemSettings />} />
           
           {/* 使 id 成为可选参数，适配 录入(:无)、查看(:id)、驳回修改(:id) */}
           <Route path={`${ROUTE_PATHS.HOTEL_EDIT}/:id?`} element={<HotelEdit />} />
           
           {/*商家房源状态页 */}
-          <Route path="/hotel/status" element={<HotelStatus />} />
+          <Route path={ROUTE_PATHS.HOTEL_STATUS} element={<HotelStatus />} />
           
           <Route path={ROUTE_PATHS.HOTEL_AUDIT} element={<HotelAudit />} />
         </Route>

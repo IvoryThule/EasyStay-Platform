@@ -1,2 +1,81 @@
-﻿/* [页面样式] 登录页 */
-/* 待实现。 */
+.login-page {
+  min-height: 100vh;
+  padding: 48rpx 32rpx;
+  background: linear-gradient(180deg, #eaf2ff 0%, #f8fbff 40%, #f5f7fb 100%);
+  box-sizing: border-box;
+
+  .card {
+    margin-top: 80rpx;
+    background: #fff;
+    border-radius: 28rpx;
+    padding: 36rpx 28rpx 28rpx;
+    box-shadow: 0 16rpx 32rpx rgba(37, 99, 235, 0.12);
+  }
+
+  .tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 999rpx;
+    padding: 6rpx;
+    margin-bottom: 28rpx;
+  }
+
+  .tab {
+    flex: 1;
+    height: 68rpx;
+    border-radius: 999rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 28rpx;
+    transition: all 0.2s;
+
+    &.active {
+      color: #fff;
+      background: #2563eb;
+      font-weight: 600;
+    }
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 18rpx;
+  }
+
+  .field {
+    height: 84rpx;
+    border-radius: 14rpx;
+    border: 1rpx solid #d9e2f3;
+    background: #f8fafc;
+    padding: 0 22rpx;
+    box-sizing: border-box;
+    font-size: 28rpx;
+    color: #0f172a;
+  }
+
+  .actions {
+    margin-top: 28rpx;
+    text-align: center;
+  }
+
+  .submit-btn {
+    height: 84rpx;
+    border-radius: 42rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2563eb;
+    color: #fff;
+    font-size: 30rpx;
+    font-weight: 600;
+  }
+
+  .demo-link {
+    display: inline-block;
+    margin-top: 24rpx;
+    font-size: 24rpx;
+    color: #64748b;
+  }
+}

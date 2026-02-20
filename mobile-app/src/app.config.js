@@ -4,6 +4,7 @@
     'pages/ai-chat/index',
     'pages/list/index',
     'pages/detail/index',
+    'pages/order/index',
     'pages/login/index',
     'pages/user/index'
   ],
@@ -32,7 +33,7 @@
         selectedIconPath: 'assets/tabbar/map-active.png'
       },
       {
-        pagePath: 'pages/login/index',
+        pagePath: 'pages/order/index',
         text: '订单',
         iconPath: 'assets/tabbar/order.png',
         selectedIconPath: 'assets/tabbar/order-active.png'

@@ -25,6 +25,7 @@ const HotelDetail = () => {
   checkOut: '',
   nightCount: 1
  });
+ const [bookingRoomId, setBookingRoomId] = useState(null);
 
  // 【核心修复】更加健壮的日期计算函数
  const calculateNights = (start, end) => {
@@ -91,6 +92,57 @@ const HotelDetail = () => {
    nightCount: calculateNights(checkIn, checkOut)
   });
   setIsVisible(false);
+ };
+
+ const formatDisplayDateToISO = (displayDate, defaultOffset = 0) => {
+  const fallback = dayjs().add(defaultOffset, 'day').format('YYYY-MM-DD');
+  if (!displayDate || typeof displayDate !== 'string') return fallback;
+
+  const matched = displayDate.match(/(\d{1,2})月(\d{1,2})日/);
+  if (!matched) return fallback;
+
+  const year = dayjs().year();
+  const month = matched[1].padStart(2, '0');
+  const day = matched[2].padStart(2, '0');
+  return dayjs(`${year}-${month}-${day}`).format('YYYY-MM-DD');
+ };
+
+ const handleCreateOrder = async (room) => {
+  const token = Taro.getStorageSync('token');
+  if (!token) {
+   Taro.navigateTo({ url: '/pages/login/index?redirect=/pages/order/index' });
+   return;
+  }
+
+  if (!hotelInfo?.id || !room?.id) {
+   Taro.showToast({ title: '下单参数异常', icon: 'none' });
+   return;
+  }
+
+  setBookingRoomId(room.id);
+  try {
+   const res = await request({
+    url: '/order/create',
+    method: 'POST',
+    data: {
+     hotel_id: hotelInfo.id,
+     room_type_id: room.id,
+     check_in: formatDisplayDateToISO(dateRange.checkIn, 0),
+     check_out: formatDisplayDateToISO(dateRange.checkOut, 1)
+    }
+   });
+
+   if (res.code === 200) {
+    Taro.showToast({ title: '下单成功', icon: 'success' });
+    Taro.switchTab({ url: '/pages/order/index' });
+   } else {
+    Taro.showToast({ title: res.msg || '下单失败', icon: 'none' });
+   }
+  } catch (error) {
+   Taro.showToast({ title: error?.msg || '下单失败', icon: 'none' });
+  } finally {
+   setBookingRoomId(null);
+  }
  };
 
  // --- 【关键修改】接入真实 API ---
@@ -234,7 +286,9 @@ const HotelDetail = () => {
         <Text className='r-name'>{room.name}</Text>
         <View className='r-bottom'>
          <Text className='price'>¥{parseFloat(room.price).toFixed(0)}</Text>
-         <View className='btn-book' onClick={() => Taro.showToast({title:'预订中'})}>预订</View>
+         <View className='btn-book' onClick={() => handleCreateOrder(room)}>
+          {bookingRoomId === room.id ? '预订中...' : '预订'}
+         </View>
         </View>
        </View>
       </View>

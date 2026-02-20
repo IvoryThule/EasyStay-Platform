@@ -1,2 +1,142 @@
-/* [页面样式] 个人中心 */
-/* 待实现。 */
+.user-page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 24rpx;
+  box-sizing: border-box;
+
+  .profile-card {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border-radius: 24rpx;
+    padding: 28rpx;
+    display: flex;
+    align-items: center;
+    color: #fff;
+    box-shadow: 0 12rpx 24rpx rgba(37, 99, 235, 0.2);
+  }
+
+  .avatar {
+    width: 90rpx;
+    height: 90rpx;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38rpx;
+    font-weight: 700;
+    margin-right: 22rpx;
+  }
+
+  .profile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+  }
+
+  .name {
+    font-size: 34rpx;
+    font-weight: 600;
+  }
+
+  .sub {
+    font-size: 24rpx;
+    opacity: 0.9;
+  }
+
+  .stats-grid {
+    margin-top: 20rpx;
+    background: #fff;
+    border-radius: 20rpx;
+    padding: 16rpx 6rpx;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8rpx;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 14rpx 0;
+  }
+
+  .num {
+    display: block;
+    font-size: 34rpx;
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  .label {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 23rpx;
+    color: #64748b;
+  }
+
+  .action-list {
+    margin-top: 20rpx;
+    background: #fff;
+    border-radius: 20rpx;
+    overflow: hidden;
+  }
+
+  .action-item {
+    height: 92rpx;
+    padding: 0 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 28rpx;
+    color: #1e293b;
+    border-bottom: 1rpx solid #edf2f7;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &.danger {
+      color: #dc2626;
+    }
+  }
+
+  .arrow {
+    color: #94a3b8;
+    font-size: 32rpx;
+  }
+}
+
+.user-page.empty-state {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 60rpx;
+
+  .title {
+    font-size: 36rpx;
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  .desc {
+    margin-top: 16rpx;
+    color: #64748b;
+    font-size: 26rpx;
+    line-height: 1.6;
+  }
+
+  .primary-btn {
+    margin-top: 34rpx;
+    width: 260rpx;
+    height: 78rpx;
+    border-radius: 39rpx;
+    background: #2563eb;
+    color: #fff;
+    font-size: 30rpx;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
