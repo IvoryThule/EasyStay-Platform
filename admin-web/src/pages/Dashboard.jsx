@@ -77,11 +77,6 @@ const Dashboard = () => {
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <Space size="large">
           <Title level={4} style={{ margin: 0, color: THEME.text }}>经营数据报告</Title>
-          <Segmented 
-            options={['概要', '销售数据', '流量数据', '下载中心']} 
-            defaultValue="概要"
-            style={{ padding: '4px' }}
-          />
         </Space>
         <Space>
           <Button icon={<DownloadOutlined />}>导出报告</Button>
@@ -92,10 +87,10 @@ const Dashboard = () => {
       {/* 核心指标卡片  */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {[
-          { label: '预订订单数', value: overview.totalOrders || 0, trend: '+12.5%', color: THEME.primary },
-          { label: '间夜量', value: overview.totalNights || 0, trend: '+5.2%', color: THEME.success },
-          { label: '销售额 (RMB)', value: `${(parseFloat(overview.totalRevenue || 0) / 10000).toFixed(2)}万`, trend: '+8.1%', color: THEME.text },
-          { label: '平均转化率', value: overview.avgConversionRate || '0%', trend: '-1.2%', color: THEME.warning },
+          { label: '预订订单数', value: overview.totalOrders || 0, color: THEME.primary },
+          { label: '间夜量', value: overview.totalNights || 0, color: THEME.success },
+          { label: '销售额 (RMB)', value: `${(parseFloat(overview.totalRevenue || 0) / 10000).toFixed(2)}万`, color: THEME.text },
+          { label: '平均转化率', value: overview.avgConversionRate || '0%', color: THEME.warning },
         ].map((item, i) => (
           <Col xs={24} sm={12} lg={6} key={i}>
             <Card variant="borderless" style={{ borderRadius: 12 }}>
@@ -103,7 +98,6 @@ const Dashboard = () => {
                 title={<Text type="secondary">{item.label}</Text>}
                 value={item.value}
                 valueStyle={{ fontWeight: 700, color: THEME.text }}
-                suffix={<Text style={{ fontSize: 12, color: item.trend.startsWith('+') ? '#10b981' : '#ef4444' }}>{item.trend}</Text>}
               />
               <div style={{ marginTop: 12 }}>
                 <Progress 
@@ -188,87 +182,7 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* 底部左侧：渠道占比 (高级环形图) */}
-        <Col xs={24} lg={8}>
-          <Card title="流量获取渠道" variant="borderless" style={{ borderRadius: 12 }}>
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={channelDataFormatted}
-                    innerRadius={70}
-                    outerRadius={90}
-                    paddingAngle={8}
-                    dataKey="value"
-                  >
-                    {channelDataFormatted.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend layout="horizontal" verticalAlign="bottom" align="center" iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </Col>
 
-        {/* 底部中间：实时服务监控 */}
-        <Col xs={24} lg={8}>
-          <Card title="平台服务健康度" variant="borderless" style={{ borderRadius: 12 }}>
-             <Space direction="vertical" style={{ width: '100%' }} size={24}>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text type="secondary" style={{ fontSize: 13 }}>API 响应可用性</Text>
-                    <Text strong style={{ color: THEME.success }}>99.98%</Text>
-                  </div>
-                  <Progress percent={99.9} showInfo={false} status="active" strokeColor={THEME.success} size={[, 8]} />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text type="secondary" style={{ fontSize: 13 }}>商家平均响应时效</Text>
-                    <Text strong>1.2h / 2h</Text>
-                  </div>
-                  <Progress percent={85} showInfo={false} strokeColor={THEME.primary} size={[, 8]} />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text type="secondary" style={{ fontSize: 13 }}>用户纠纷处理率</Text>
-                    <Text strong>92%</Text>
-                  </div>
-                  <Progress percent={92} showInfo={false} strokeColor={THEME.warning} size={[, 8]} />
-                </div>
-             </Space>
-          </Card>
-        </Col>
-
-        {/* 底部右侧：动态预警  */}
-        <Col xs={24} lg={8}>
-          <Card title="异常与动态预警" variant="borderless" style={{ borderRadius: 12 }}>
-            <List
-              split={false}
-              dataSource={[
-                { title: '库存预警：大床房余量 < 2', type: 'error', time: '3分钟前' },
-                { title: '新审核申请：静安希尔顿酒店', type: 'processing', time: '12分钟前' },
-                { title: '系统更新：V2.4 版本已上线', type: 'success', time: '1小时前' },
-                { title: '结算通知：1月账单已生成', type: 'warning', time: '2小时前' },
-              ]}
-              renderItem={item => (
-                <List.Item style={{ padding: '12px 0' }}>
-                  <Space align="start">
-                    <Badge status={item.type} style={{ marginTop: 8 }} />
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <Text style={{ fontSize: 13, fontWeight: 500 }}>{item.title}</Text>
-                      <Text type="secondary" style={{ fontSize: 11 }}>{item.time}</Text>
-                    </div>
-                  </Space>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
     </div>
   );
 };
