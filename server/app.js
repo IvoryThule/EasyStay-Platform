@@ -4,7 +4,15 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+// 配置 CORS
+app.use(cors({
+    origin: '*', // 允许所有来源（移动端/H5/Web）
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'] // 允许常见的请求头
+}));
+// 处理 OPTIONS 预检请求
+app.options('*', cors());
+
 app.use(express.json());
 
 // 路由

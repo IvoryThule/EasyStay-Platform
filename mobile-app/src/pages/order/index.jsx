@@ -17,7 +17,7 @@ const STATUS_LABEL = {
   2: '已取消'
 }
 
-const IMAGE_HOST = 'http://localhost:3000'
+const IMAGE_HOST = 'http://1.14.207.212:8848'
 
 export default function OrderPage() {
   const [loggedIn, setLoggedIn] = useState(!!Taro.getStorageSync('token'))

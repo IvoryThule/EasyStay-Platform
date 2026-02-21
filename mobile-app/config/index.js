@@ -24,6 +24,7 @@ export default defineConfig(async (merge, { command, mode }) => {
     },
     copy: {
       patterns: [
+        { from: 'src/assets', to: 'dist/assets' }
       ],
       options: {
       }
@@ -48,10 +49,10 @@ export default defineConfig(async (merge, { command, mode }) => {
       },
     },
     h5: {
-      publicPath: '/mobile/',
+      publicPath: './', // 相对路径，更稳妥
       router: {
-        mode: 'browser',    // 或 'hash'
-        basename: '/mobile'
+        mode: 'hash',   // 改为 hash 路由，避免路径匹配不上的问题
+        basename: '/' 
       },
       staticDirectory: 'static',
       output: {

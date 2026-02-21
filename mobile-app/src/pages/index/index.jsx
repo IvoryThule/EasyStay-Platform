@@ -194,7 +194,8 @@ export default function Index() {
           ]
           return {
             id: item.id,
-            image: item.cover_image?.startsWith('http') ? item.cover_image : `http://localhost:3000${item.cover_image}`,
+            // 修改为使用真实服务器地址，避免 localhost 在手机上无法访问
+            image: item.cover_image?.startsWith('http') ? item.cover_image : `http://1.14.207.212:8848${item.cover_image}`,
             ...slogans[index % 3]
           }
         })
@@ -245,7 +246,7 @@ export default function Index() {
           price: parseFloat(item.price),
           rating: item.score, // 只使用后端真实评分，没有就不显示
           reviews: item.reviews || 0, // 使用后端真实评价数
-          image: item.cover_image?.startsWith('http') ? item.cover_image : `http://localhost:3000${item.cover_image}`,
+          image: item.cover_image?.startsWith('http') ? item.cover_image : `http://1.14.207.212:8848${item.cover_image}`,
           tags: Array.isArray(item.tags) ? item.tags.filter(t => !t.includes(':')).slice(0, 3) : []
         }))
         setRecommendHotels(formatted)

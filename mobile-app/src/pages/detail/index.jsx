@@ -16,7 +16,7 @@ const HotelDetail = () => {
  const [rooms, setRooms] = useState([]);
 
  // 图片地址前缀 (针对本地服务器)
- const IMAGE_HOST = 'http://localhost:3000';
+ const IMAGE_HOST = 'http://1.14.207.212:8848';
 
  // 【新增】日期相关状态
  const [isVisible, setIsVisible] = useState(false); // 控制日历显示

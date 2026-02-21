@@ -3,24 +3,31 @@
 import Taro from '@tarojs/taro';
 
 // 统一服务器地址
-// 注意：如果是在手机真机或服务器部署后通过公网访问，请使用服务器真实 IP 或域名
-// H5 环境推荐使用相对路径 '/api' 以利用 Nginx 反向代理
-// 小程序环境必须使用完整 HTTPS 域名
-const BASE_URL = process.env.TARO_ENV === 'h5' ? '/api' : 'http://1.14.207.212:8848/api'; 
-//const BASE_URL = 'http://localhost:3000/api';
+// 使用环境变量定义 BASE_URL
+const BASE_URL = process.env.TARO_APP_API_BASE_URL || 'http://1.14.207.212:8848/api';
+console.log('[API_BASE_URL]', BASE_URL);
+
+// 如果环境变量中没有包含 /api 且原 BASE_URL 也不包含，需要注意路径拼接问题
+// 这里假设环境变量配置正确，或者在代码中处理 /api
 
 const request = (options) => {
   const { url, method = 'GET', data } = options;
   const token = Taro.getStorageSync('token');
+  
+  // 动态构建 Header，避免 GET 请求带 Content-Type 触发预检
+  const header = {};
+  if (method.toUpperCase() !== 'GET') {
+    header['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    header['Authorization'] = `Bearer ${token}`;
+  }
 
   return Taro.request({
     url: `${BASE_URL}${url}`, // 拼接完整地址
     method,
     data,
-    header: {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    }
+    header
   }).then(res => {
     const { statusCode, data: resData } = res;
     // 增加对 200 以外状态码的判断

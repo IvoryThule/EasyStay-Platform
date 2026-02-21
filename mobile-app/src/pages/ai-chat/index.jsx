@@ -15,7 +15,7 @@ const DEFAULT_COVER = 'https://images.unsplash.com/photo-1566073771259-6a8506099
 function normalizeImage(url) {
   if (!url) return DEFAULT_COVER;
   if (url.startsWith('http')) return url;
-  return `http://localhost:3000${url}`;
+  return `http://1.14.207.212:8848${url}`;
 }
 
 function toMessageId() {
