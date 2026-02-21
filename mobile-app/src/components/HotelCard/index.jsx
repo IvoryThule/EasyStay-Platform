@@ -1,6 +1,4 @@
-﻿// [组件] 酒店列表卡片逻辑
-// 待实现。
-import React from 'react';
+﻿import React from 'react';
 import { View, Image, Text } from '@tarojs/components';
 import './index.scss'; 
 

@@ -1,5 +1,4 @@
 ﻿// [工具] Taro.request 封装
-// 待实现。
 import Taro from '@tarojs/taro';
 
 // 统一服务器地址
