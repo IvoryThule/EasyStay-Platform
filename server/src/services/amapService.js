@@ -18,7 +18,8 @@ const getLocationByIP = async (ip) => {
 
         // 开发环境 localhost 往往是 127.0.0.1 或 ::1，高德查不到
         // 这里如果是本地 IP，返回默认城市(上海)用于测试
-        if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+        // 修改：在服务器部署环境下，暂时移除对 10.x和192.168.x 的强制拦截，尝试请求高德接口
+        if (ip === '127.0.0.1' || ip === '::1') {
             console.log(`ℹ️ 检测到本地开发环境 IP (${ip})，使用默认城市(上海)`);
             return {
                 province: '上海市',

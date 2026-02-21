@@ -3,8 +3,11 @@
 import Taro from '@tarojs/taro';
 
 // 统一服务器地址
-//const BASE_URL = 'http://1.14.207.212:8848/api'; 
-const BASE_URL = 'http://localhost:3000/api';
+// 注意：如果是在手机真机或服务器部署后通过公网访问，请使用服务器真实 IP 或域名
+// H5 环境推荐使用相对路径 '/api' 以利用 Nginx 反向代理
+// 小程序环境必须使用完整 HTTPS 域名
+const BASE_URL = process.env.TARO_ENV === 'h5' ? '/api' : 'http://1.14.207.212:8848/api'; 
+//const BASE_URL = 'http://localhost:3000/api';
 
 const request = (options) => {
   const { url, method = 'GET', data } = options;
