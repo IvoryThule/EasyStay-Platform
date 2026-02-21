@@ -20,6 +20,13 @@ const onFinish = async (values) => {
     
     // 修改这里：检查 code 是否为 200
     if (response.code === 200) { 
+        // 关键修复：检查用户角色
+        const user = response.data.user;
+        if (user.role === 'user') {
+            message.error('普通用户无权访问商家后台！请使用 App。');
+            return;
+        }
+
       // 存储 Token 和用户信息
       localStorage.setItem(STORAGE_KEYS.TOKEN, response.data.token);
       localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(response.data.user));
