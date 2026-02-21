@@ -23,7 +23,7 @@ const create = async (req, res) => {
     }
 
     // 创建酒店记录(状态默认为 0：审核中)
-    const hotel = await Hotel.create({
+    const hotelData = {
       name,
       address,
       city,
@@ -35,9 +35,18 @@ const create = async (req, res) => {
       latitude,
       longitude,
       status: 0, // 默认为审核中
-      merchant_id  
-    }, {
-      include: [RoomType] // 声明包含关联模型一起创建
+      merchant_id
+    };
+
+    // 如果前端传了 roomTypes (或 room_types)，则整合进去
+    if (req.body.roomTypes && Array.isArray(req.body.roomTypes)) {
+       hotelData.roomTypes = req.body.roomTypes;
+    } else if (req.body.room_types && Array.isArray(req.body.room_types)) {
+       hotelData.roomTypes = req.body.room_types;
+    }
+
+    const hotel = await Hotel.create(hotelData, {
+      include: [{ model: RoomType, as: 'roomTypes' }] // 声明包含关联模型一起创建
     });
 
     success(res, hotel, 'Hotel created successfully, awaiting audit.');
@@ -181,8 +190,11 @@ const getDetail = async (req, res) => {
  */
 const update = async (req, res) => {
   try {
-    const { id, ...updateFields } = req.body;
+    const { id, roomTypes, room_types, ...updateFields } = req.body;
     
+    // 兼容 room_types 字段
+    const roomsToUpdate = roomTypes || room_types;
+
     if (!id) return fail(res, 'Hotel ID is required', 400);
 
     const hotel = await Hotel.findByPk(id);
@@ -200,13 +212,72 @@ const update = async (req, res) => {
     if (isOwner && !isAdmin) {
       updateFields.status = 0;
     }
-    // 管理员可以直接修改 status (在 audit 接口，或这里)
-
+    
     // 禁止修改的字段
     delete updateFields.merchant_id;
     delete updateFields.id;
 
+    // 1. 更新酒店基础信息
     await hotel.update(updateFields);
+
+    // 2. 更新房型信息 (如果有)
+    if (roomsToUpdate && Array.isArray(roomsToUpdate)) {
+      // 策略：找出该酒店现有的所有房型
+      const existingRooms = await RoomType.findAll({ where: { hotel_id: id } });
+      const existingIds = existingRooms.map(r => r.id);
+      
+      const newRooms = [];
+      const updateRooms = [];
+      const incomingIds = [];
+
+      roomsToUpdate.forEach(rt => {
+        if (rt.id && existingIds.includes(rt.id)) {
+          // 更新
+          updateRooms.push(rt);
+          incomingIds.push(rt.id);
+        } else {
+          // 新增 (忽略前端传来的临时ID，如负数)
+          newRooms.push({ ...rt, hotel_id: id });
+        }
+      });
+
+      // 删除：在 existingIds 中但不在 incomingIds 中的
+      const idsToDelete = existingIds.filter(eid => !incomingIds.includes(eid));
+
+      // 执行 DB 操作
+      const transaction = await Hotel.sequelize.transaction();
+      try {
+        if (idsToDelete.length > 0) {
+          await RoomType.destroy({ where: { id: idsToDelete }, transaction });
+        }
+        
+        for (const rt of updateRooms) {
+          await RoomType.update(rt, { where: { id: rt.id }, transaction });
+        }
+
+        if (newRooms.length > 0) {
+          await RoomType.bulkCreate(newRooms, { transaction });
+        }
+
+        await transaction.commit();
+      } catch (err) {
+        await transaction.rollback();
+        console.error('RoomType update failed, rolling back', err);
+        // 不中断主流程，但记录错误
+      }
+
+      // 3. 实时更新酒店起步价 (取当前最低房型价格)
+      const minPriceRoom = await RoomType.findOne({
+        where: { hotel_id: id },
+        order: [['price', 'ASC']],
+        attributes: ['price']
+      });
+
+      if (minPriceRoom) {
+         // 如果有房型，更新酒店 price 为最低房价
+         await hotel.update({ price: minPriceRoom.price });
+      }
+    }
     
     success(res, hotel, 'Hotel updated successfully');
   } catch (error) {

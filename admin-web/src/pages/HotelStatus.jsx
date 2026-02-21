@@ -41,7 +41,7 @@ const fetchMyHotels = async () => {
       render: (status, record) => {
         const statusMap = {
           0: { color: 'gold', text: '审核中' },
-          1: { color: 'green', text: '已通过 (不可修改)' },
+          1: { color: 'green', text: '已通过 (点击修改)' },
           2: { color: 'red', text: '已驳回' },
           3: { color: 'default', text: '已下线' }
         };
@@ -65,10 +65,10 @@ const fetchMyHotels = async () => {
       key: 'action',
       render: (_, record) => (
         <Space>
-          {/* 只有状态为 2 (驳回) 时才允许编辑 */}
-          {record.status === 2 ? (
+          {/* 允许修改状态为 2 (驳回) 或 1 (已发布) 的酒店 */}
+          {record.status === 2 || record.status === 1 ? (
             <Button type="primary" onClick={() => navigate(`${ROUTE_PATHS.HOTEL_EDIT}/${record.id}`)}>
-              修改并重审
+              {record.status === 1 ? '修改信息' : '修改并重审'}
             </Button>
           ) : (
             <Button onClick={() => navigate(`${ROUTE_PATHS.HOTEL_EDIT}/${record.id}?readonly=true`)}>

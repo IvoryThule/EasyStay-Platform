@@ -25,7 +25,9 @@ const HotelEdit = () => {
   
   const BASE_URL = 'http://localhost:3000';
 
-  const isReadOnly = searchParams.get('readonly') === 'true' || (id && currentStatus !== 2 && currentStatus !== null);
+  // 允许编辑的状态: 2(驳回), 1(已发布-需要重新审核)
+  // 只有 status=0 (审核中) 或者是明确传了 readonly 参数时，才是只读
+  const isReadOnly = searchParams.get('readonly') === 'true' || (id && currentStatus === 0);
 
   useEffect(() => {
     if (id) {
@@ -57,6 +59,7 @@ const HotelEdit = () => {
         price: data.price,
         opening_date: openingDate ? dayjs(openingDate) : null,
         room_types: (data.roomTypes || data.room_types || []).map(rt => ({
+          id: rt.id, // 关键：保存 id 用于更新
           type_name: rt.name, 
           price: rt.price,
           stock: rt.stock
@@ -86,10 +89,19 @@ const HotelEdit = () => {
       ];
 
       const roomTypesJson = JSON.stringify((values.room_types || []).map(item => ({
-      name: item.type_name,
-      price: item.price,
-      stock: item.stock
-    })));
+        name: item.type_name,
+        price: item.price,
+        stock: item.stock
+      })));
+
+      // 构建传给后端的 room_types 数组
+      const roomTypesPayload = (values.room_types || []).map(item => ({
+        // 如果有 id 传回 id（更新），否则不传（新增）
+        id: item.id, 
+        name: item.type_name,
+        price: item.price,
+        stock: item.stock
+      }));
 
       const payload = {
         id: id,
@@ -97,10 +109,11 @@ const HotelEdit = () => {
         city: Array.isArray(values.city) ? values.city[0] : values.city,
         cover_image: coverImage,
         tags: [
-        `EN:${values.name_en || ''}`,
-        `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
-        `ROOMDATA:${roomTypesJson}`
+          `EN:${values.name_en || ''}`,
+          `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
+          `ROOMDATA:${roomTypesJson}` // 保留以兼容旧逻辑，但主要依靠 room_types
         ],
+        room_types: roomTypesPayload, // 新增：显式传递房型数据
         status: 0 
       };
 
@@ -216,6 +229,11 @@ const HotelEdit = () => {
                 <>
                   {fields.map(({ key, name, ...restField }) => (
                     <Row key={key} gutter={16} align="baseline" style={{ background: '#fafafa', padding: '16px', marginBottom: '16px', borderRadius: '8px' }}>
+                      <Col span={0}>
+                         <Form.Item {...restField} name={[name, 'id']} hidden>
+                           <Input />
+                         </Form.Item>
+                      </Col>
                       <Col span={8}>
                         <Form.Item {...restField} name={[name, 'type_name']} label="房型名称" rules={[{ required: true }]}>
                           <Input placeholder="例：豪华大床房" />
