@@ -53,22 +53,23 @@ fi
 
 # 3. 构建 PC 端
 echo ">>> Step 3: 构建 PC 端 (Admin)..." | tee -a "$LOGFILE"
-cd "$ADMIN_DIR"
-npm install --silent
-npm run build
-# 结果在 dist，移动到 webroot
-mkdir -p "$WEBROOT"
-# 原子替换 admin
-rsync -a --delete "$ADMIN_DIR/dist/" "$WEBROOT/admin/"
+if [ -d "$ADMIN_DIR/dist" ]; then
+    mkdir -p "$WEBROOT/admin"
+    rsync -a --delete "$ADMIN_DIR/dist/" "$WEBROOT/admin/"
+    echo "✅ PC 端完成" | tee -a "$LOGFILE"
+else
+    echo "⚠️  admin-web/dist 不存在，跳过" | tee -a "$LOGFILE"
+fi
 
-# 4. 构建移动端
+#4. 构建移动端
 echo ">>> Step 4: 构建移动端 (Mobile)..." | tee -a "$LOGFILE"
-cd "$MOBILE_DIR"
-npm install --silent
-# Taro 构建 H5
-npm run build:h5
-# 原子替换 mobile
-rsync -a --delete "$MOBILE_DIR/dist/" "$WEBROOT/mobile/"
+if [ -d "$MOBILE_DIR/dist" ]; then
+    mkdir -p "$WEBROOT/mobile"
+    rsync -a --delete "$MOBILE_DIR/dist/" "$WEBROOT/mobile/"
+    echo "✅ 移动端完成" | tee -a "$LOGFILE"
+else
+    echo "⚠️  mobile-app/dist 不存在，跳过" | tee -a "$LOGFILE"
+fi
 
 # 5. 权限修正
 echo ">>> Step 5: 修正权限..." | tee -a "$LOGFILE"
@@ -81,7 +82,7 @@ if [ -f "$NGINX_CONF_SRC" ]; then
     # 创建软链接：直接链接到 sites-enabled，覆盖旧的
     # 注意：这里直接覆盖了原来的配置
     ln -sf "$NGINX_CONF_SRC" "$NGINX_CONF_DEST"
-    
+
     # 测试配置是否正确
     echo "测试 Nginx 配置..."
     if nginx -t; then

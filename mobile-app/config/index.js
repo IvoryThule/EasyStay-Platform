@@ -52,7 +52,8 @@ export default defineConfig(async (merge, { command, mode }) => {
       publicPath: './', // 相对路径，更稳妥
       router: {
         mode: 'hash',   // 改为 hash 路由，避免路径匹配不上的问题
-        basename: '/' 
+        // 线上通过 /mobile/ 子路径访问，basename 必须对齐，否则首屏路由不匹配导致白屏
+        basename: '/mobile'
       },
       staticDirectory: 'static',
       output: {
