@@ -162,18 +162,35 @@ const HotelDetail = () => {
     const info = hotelRes.data;
     // 处理图片数组
     let displayImages = [];
-    // --- 核心修复：确保 displayImages 永远是一个数组 ---
-    let imgs = [];
+    
+    // 优先使用 images 字段 (新表结构), 其次回退到 cover_image
     if (info.images) {
      try {
-      const parsed = typeof info.images === 'string' ? JSON.parse(info.images) : info.images;
-      imgs = Array.isArray(parsed) ? parsed : [];
-     } catch (e) { imgs = []; }
+       // 如果数据库返回的是 JSON 对象/数组，直接使用
+       // 如果是字符串，尝试解析
+       const raw = info.images;
+       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+       if (Array.isArray(parsed) && parsed.length > 0) {
+         displayImages = parsed;
+       }
+     } catch (e) {
+       console.error('Parse images failed', e);
+     }
+    }
+    
+    // 如果没有 images 或解析失败，使用 cover_image
+    if (displayImages.length === 0 && info.cover_image) {
+      displayImages = [info.cover_image];
+    }
+    
+    // 再次兜底
+    if (displayImages.length === 0) {
+        displayImages = ['https://dummyimage.com/750x400/cccccc/ffffff&text=No+Image'];
     }
 
     setHotelInfo({
      ...info,
-     displayImages: imgs.map(url => url.startsWith('http') ? url : `${IMAGE_HOST}${url}`),
+     displayImages: displayImages.map(url => url.startsWith('http') ? url : `${IMAGE_HOST}${url}`),
      // --- 核心修复：确保 facilities 永远是一个数组 ---
      displayFacilities: info.facilities ? (typeof info.facilities === 'string' ? JSON.parse(info.facilities) : info.facilities) : []
     });
@@ -224,22 +241,37 @@ const HotelDetail = () => {
    </View>
 
    <ScrollView scrollY className='scroll-content' style={{ height: '100vh' }}>
-    {/* 修复点 1：使用可选链 + 空数组兜底 */}
+     {/* 修复点 1：使用可选链 + 空数组兜底 */}
     <View className='banner-area'>
      {hotelInfo?.displayImages && hotelInfo.displayImages.length > 0 ? (
-      <Swiper className='banner-swiper' circular indicatorDots indicatorActiveColor='#2563eb'>
+      <Swiper className='banner-swiper' 
+        circular 
+        indicatorDots 
+        indicatorActiveColor='#2563eb' 
+        autoplay 
+        interval={4000}
+      >
        {hotelInfo.displayImages.map((img, index) => (
         <SwiperItem key={index}>
-         <Image src={img} mode='aspectFill' className='banner-image' />
+         <Image 
+          src={img} 
+          mode='aspectFill' 
+          className='banner-image' 
+          onClick={() => {
+            // 点击查看大图
+            Taro.previewImage({
+              urls: hotelInfo.displayImages,
+              current: img
+            })
+          }}
+         />
         </SwiperItem>
        ))}
       </Swiper>
      ) : (
       <View className='no-img'>暂无图片</View>
      )}
-    </View>
-
-    <View className='info-card'>
+    </View>    <View className='info-card'>
      <Text className='name'>{hotelInfo?.name}</Text>
      {/* 新增:星级显示 */}
      {hotelInfo?.star && (
@@ -273,8 +305,9 @@ const HotelDetail = () => {
      </View>
     </View>
 
-    {/* 修复点 3：房型列表 map 保护 */}
-    <View className='room-list'>
+     {/* 修复点 3：房型列表 map 保护 */}
+     <View className='section-title' style={{padding: '0 30px', margin: '20px 0 10px'}}>预订房型</View>
+     <View className='room-list'>
      {(rooms || []).map(room => (
       <View key={room.id} className='room-card'>
        <Image 

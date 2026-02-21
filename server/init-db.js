@@ -44,6 +44,11 @@ async function initDB() {
       star: 5,
       tags: ['豪华', '江景', 'SPA'],
       cover_image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945',
+      images: [
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945',
+        'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
+        'https://images.unsplash.com/photo-1584132967334-10e028bd69f7'
+      ],
       status: 1, // 已发布
       merchant_id: merchant.id,
       latitude: 31.245,
@@ -58,6 +63,11 @@ async function initDB() {
       star: 3,
       tags: ['商务', '近地铁', '免费停车'],
       cover_image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd',
+      images: [
+        'https://images.unsplash.com/photo-1582719508461-905c673771fd',
+        'https://images.unsplash.com/photo-1590490360182-c33d57733427',
+        'https://images.unsplash.com/photo-1596436889106-be35e843f974'
+      ],
       status: 1, // 已发布
       merchant_id: merchant.id,
       latitude: 39.90,

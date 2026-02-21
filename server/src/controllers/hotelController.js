@@ -12,7 +12,7 @@ const create = async (req, res) => {
     // 从请求体中解构酒店字段
     const { 
         name, address, city, price, star, 
-        tags, cover_image, latitude, longitude 
+        tags, cover_image, images, latitude, longitude 
     } = req.body;
     // 当前登录商户 ID（来自鉴权中间件）
     const merchant_id = req.user.id;
@@ -31,6 +31,7 @@ const create = async (req, res) => {
       star,
       tags: tags || [], // 防止 null
       cover_image,
+      images: images || [], // 防止 null
       latitude,
       longitude,
       status: 0, // 默认为审核中

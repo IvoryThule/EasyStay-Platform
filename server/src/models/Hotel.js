@@ -38,6 +38,11 @@ const Hotel = sequelize.define('Hotel', {
   cover_image: {
     type: DataTypes.STRING
   },
+  images: {
+    type: DataTypes.JSON, 
+    defaultValue: [],
+    comment: '酒店多图, 存储图片URL数组'
+  },
   status: {
     type: DataTypes.INTEGER,
     defaultValue: 0,
