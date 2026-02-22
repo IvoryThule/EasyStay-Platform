@@ -17,7 +17,7 @@ import './App.css'
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>             
         {/* 公开路由保持不变 */}
         <Route path={ROUTE_PATHS.LOGIN} element={<Login />} />

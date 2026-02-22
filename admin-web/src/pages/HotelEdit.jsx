@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import request from '../utils/request';
-import { STORAGE_KEYS } from '../utils/constants';
+import { STORAGE_KEYS, API_BASE_URL } from '../utils/constants';
 import dayjs from 'dayjs';
 
 const { Option } = Select;
@@ -23,7 +23,7 @@ const HotelEdit = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 
   // 允许编辑的状态: 2(驳回), 1(已发布-需要重新审核)
   // 只有 status=0 (审核中) 或者是明确传了 readonly 参数时，才是只读

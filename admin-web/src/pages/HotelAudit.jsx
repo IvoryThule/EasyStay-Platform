@@ -7,6 +7,7 @@ import {
   HomeOutlined, InfoCircleOutlined, CheckCircleOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
 import request from '../utils/request';
+import { API_BASE_URL } from '../utils/constants';
 
 const { Text } = Typography;
 
@@ -17,7 +18,7 @@ const HotelAudit = () => {
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [roomTypes, setRoomTypes] = useState([]);
   
-  const BASE_URL = 'http://localhost:3000';
+  const BASE_URL = API_BASE_URL.replace(/\/api$/, '');
 
   const fetchList = async () => {
     setLoading(true);
