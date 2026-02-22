@@ -201,7 +201,7 @@ export default function Index() {
       await fetchRecommendHotels(cityForQuery)
 
       // 4. 获取Banner酒店(前3条高星酒店)
-      await fetchBannerHotels(cityForQuery)
+      await fetchBannerHotels()
     } catch (error) {
       console.error('初始化失败:', error)
     } finally {
@@ -210,14 +210,13 @@ export default function Index() {
   }
 
   // 获取Banner酒店
-  const fetchBannerHotels = async (city) => {
+  const fetchBannerHotels = async () => {
     try {
-      const cleanCity = normalizeCity(city)
       // 优先获取5星级,如果不足3条则降级到4星
       let res = await request({
         url: '/hotel/list',
         method: 'GET',
-        data: { city: cleanCity, limit: 3, star: 5 }
+        data: { limit: 3, star: 5 }
       })
       
       let bannerList = res.code === 200 && res.data?.list ? res.data.list : []
@@ -227,7 +226,7 @@ export default function Index() {
         const res4Star = await request({
           url: '/hotel/list',
           method: 'GET',
-          data: { city: cleanCity, limit: 3 - bannerList.length, star: 4 }
+          data: { limit: 3 - bannerList.length, star: 4 }
         })
         if (res4Star.code === 200 && res4Star.data?.list) {
           bannerList = [...bannerList, ...res4Star.data.list]
@@ -239,7 +238,7 @@ export default function Index() {
         const resAll = await request({
           url: '/hotel/list',
           method: 'GET',
-          data: { city: cleanCity, limit: 3 }
+          data: { limit: 3 }
         })
         if (resAll.code === 200 && resAll.data?.list) {
           const existingIds = bannerList.map(h => h.id)
@@ -413,13 +412,14 @@ export default function Index() {
   }
   // 处理城市选择
   const handleCitySelect = async (city) => {
-    setCurrentCity(city)
+    const finalCity = city === '不限城市' ? '' : city;
+    setCurrentCity(finalCity || '不限城市')
     setSearchParams(prev => ({
       ...prev,
-      city: city
+      city: finalCity || '不限城市'
     }))
     setShowCityPicker(false)
-    await Promise.all([fetchRecommendHotels(city), fetchBannerHotels(city)])
+    await Promise.all([fetchRecommendHotels(finalCity), fetchBannerHotels(finalCity)])
   }
   const openCalendar = (e) => {
 
@@ -958,7 +958,33 @@ export default function Index() {
                 ✕
               </Text>
             </View>
+            
+            {/* 新增：自定义城市搜索框 */}
+            <View className="picker-search-box" style={{ padding: '10px 16px', borderBottom: '1px solid #f0f0f0' }}>
+              <Input 
+                className="picker-search-input"
+                placeholder="输入城市名称搜索"
+                style={{ backgroundColor: '#f5f5f5', padding: '8px 12px', borderRadius: '8px', fontSize: '14px' }}
+                onConfirm={(e) => {
+                  const val = e.detail.value.trim();
+                  if (val) {
+                    handleCitySelect(val);
+                  }
+                }}
+                confirmType="search"
+              />
+            </View>
+
             <ScrollView className="picker-list" scrollY>
+              {/* 新增：不限城市选项 */}
+              <View
+                className={`picker-item ${!currentCityName || currentCityName === '请选择' || currentCityName === '不限城市' ? 'selected' : ''}`}
+                onClick={() => handleCitySelect('不限城市')}
+              >
+                <Text className="picker-item-name" style={{ fontWeight: 'bold' }}>不限城市</Text>
+                <Text className="picker-item-count">全部酒店</Text>
+              </View>
+
               {popularCities.map(city => (
 
                 <View

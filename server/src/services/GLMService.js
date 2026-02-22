@@ -95,6 +95,20 @@ class AiChatService {
 - 高档型(4星)：400-1000元/晚
 - 豪华型(5星)：800元以上/晚
 - 价格偏离同城市同星级均价 40% 以上需标记`,
+      HOTEL_SLOGAN_GENERATOR: `你是 EasyStay 平台的「资深酒店体验官」，负责为酒店撰写极具吸引力的一句话推荐语（类似"BOSS推荐"）。
+
+## 撰写要求
+1. **字数限制**：严格控制在 15 个字以内。
+2. **内容重点**：突出酒店的特色、位置优势、星级或独特体验。
+3. **语气风格**：专业、诱人、精炼。
+4. **输出格式**：直接输出推荐语文本，不要包含任何前缀（如"推荐语："、"BOSS推荐："）、引号或多余的标点符号。
+
+## 示例
+输入：上海宝格丽酒店，标签：外滩,奢华,米其林
+输出：外滩奢华地标，尽享米其林盛宴
+
+输入：全季酒店(北京国贸店)，标签：商务,近地铁
+输出：国贸核心商圈，商务出行首选`,
       GENERAL_ASSISTANT: `你是 EasyStay 智慧酒店预订平台的 AI 助手「易小住」。
 
 ## 平台介绍
@@ -210,15 +224,38 @@ EasyStay 是一个连接酒店商家与消费者的智能预订平台，提供�
               return JSON.parse(jsonStr);
           }
       } catch (e) {
-          console.error('❌ 解析 AI 返回的 JSON 失败:', e.message);
+          console.error('❌ 解析 JSON 失败:', e.message, '原始输出:', result);
+          return { intent: 'chat', rawResponse: result };
       }
-      
-      // 解析失败，返回原始文本
-      return { intent: 'chat', rawResponse: result };
   }
 
   /**
-   * 原 auditHotel 方法迁移
+   * 为酒店生成一句话推荐语
+   * @param {string} hotelName - 酒店名称
+   * @param {string} city - 城市
+   * @param {Array<string>} tags - 酒店标签
+   * @returns {string} 推荐语
+   */
+  async generateHotelSlogan(hotelName, city, tags = []) {
+      const tagsStr = tags.length > 0 ? tags.join(',') : '无';
+      const prompt = `输入：${city}${hotelName}，标签：${tagsStr}\n输出：`;
+      
+      try {
+          const result = await this.generateText(prompt, 'HOTEL_SLOGAN_GENERATOR', {
+              temperature: 0.8, // 稍微提高随机性，让文案更多样
+              maxTokens: 50
+          });
+          
+          // 清理可能存在的前缀和引号
+          return result.replace(/^(推荐语：|BOSS推荐：|推荐：|输出：)/i, '').replace(/["']/g, '').trim();
+      } catch (error) {
+          console.error('❌ 生成酒店推荐语失败:', error);
+          return '精选优质酒店，为您提供舒适体验'; // 降级文案
+      }
+  }
+
+  /**
+   * 原 auditHotelInfo 方法迁移
    * 酒店审核风控评估
    * @param {object} hotelData - 酒店数据对象
    * @returns {object} 风控评估结果
@@ -240,7 +277,7 @@ EasyStay 是一个连接酒店商家与消费者的智能预订平台，提供�
       });
       
       try {
-          const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/) || result.match(/\{[\s\S]*\}/);
+          const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/) || result.match(/\{[\sS]*\}/);
           if (jsonMatch) {
               const jsonStr = jsonMatch[1] || jsonMatch[0];
               return JSON.parse(jsonStr);
@@ -251,10 +288,6 @@ EasyStay 是一个连接酒店商家与消费者的智能预订平台，提供�
       
       return { rawResponse: result };
   }
-
-  // ...existing code...
-  
-
 
   /**
    * 构建酒店领域的系统提示词
@@ -466,6 +499,7 @@ module.exports = {
   generateText: (prompt, systemPromptKey, options) => aiChatService.generateText(prompt, systemPromptKey, options),
   parseBookingIntent: (userInput) => aiChatService.parseBookingIntent(userInput),
   auditHotel: (hotelData) => aiChatService.auditHotel(hotelData),
+  generateHotelSlogan: (hotelName, city, tags) => aiChatService.generateHotelSlogan(hotelName, city, tags),
   SYSTEM_PROMPTS: aiChatService.SYSTEM_PROMPTS,
 
   // 新增接口

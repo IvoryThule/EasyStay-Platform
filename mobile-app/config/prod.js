@@ -1,4 +1,8 @@
 ﻿export default {
+  env: {
+    NODE_ENV: '"production"',
+    TARO_APP_API_BASE_URL: '"http://1.14.207.212:8848/api"'
+  },
   mini: {},
   h5: {
     // 确保产物为 es5

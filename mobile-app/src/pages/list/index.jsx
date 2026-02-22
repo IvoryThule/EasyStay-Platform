@@ -49,6 +49,9 @@ export default function HotelList() {
     star: 'all'
   })
 
+  // 新增：是否回退到显示所有酒店的状态
+  const [isFallbackAll, setIsFallbackAll] = useState(false)
+
   // --- 新增：价格转换逻辑 ---
   const getPriceRange = (type) => {
     const map = {
@@ -114,7 +117,7 @@ export default function HotelList() {
   // 3. 模拟 API 请求方法
   
   // --- 1. 核心数据请求方法 ---
-  const fetchHotelData = async (params, pageNo = 1, currentSort = sortType, tags = selectedTags) => {
+  const fetchHotelData = async (params, pageNo = 1, currentSort = sortType, tags = selectedTags, isFallback = false) => {
   if (loading) return; // 必须在这里拦截，防止重复请求
   setLoading(true);
 
@@ -129,7 +132,7 @@ export default function HotelList() {
     limit: 10
   };
 
-  if (params.city) apiQuery.city = String(params.city).replace(/市$/, '').trim()
+  if (params.city && !isFallback) apiQuery.city = String(params.city).replace(/市$/, '').trim()
   
   if (mergedKeyword) apiQuery.keyword = mergedKeyword;
   if (params.starType && params.starType !== 'all') apiQuery.star = params.starType;
@@ -151,6 +154,17 @@ export default function HotelList() {
 
     if (res.code === 200) {
       const { list: rawList, total } = res.data;
+
+      // 如果当前城市没有酒店，回退到显示所有酒店
+      if (pageNo === 1 && total === 0 && params.city && !isFallback) {
+        setLoading(false);
+        setIsFallbackAll(true);
+        return fetchHotelData(params, 1, currentSort, tags, true);
+      }
+
+      if (pageNo === 1 && !isFallback) {
+        setIsFallbackAll(false);
+      }
       
       let formatted = rawList.map(item => {
         let parsedTags = item.tags || []
@@ -220,7 +234,7 @@ export default function HotelList() {
 
   const nextPage = page + 1;
   setPage(nextPage);
-  fetchHotelData(queryParams, nextPage, sortType, selectedTags);
+  fetchHotelData(queryParams, nextPage, sortType, selectedTags, isFallbackAll);
 };
 
   // 处理关键词搜索
@@ -530,7 +544,7 @@ const handleTabClick = (tabName) => {
         <View className="filter-summary">
           <Text className="summary-text">
             当前筛选:
-            {queryParams.city && ` 城市:${queryParams.city}`}
+            {queryParams.city && !isFallbackAll && ` 城市:${queryParams.city}`}
             {queryParams.keyword && ` "${queryParams.keyword}"`}
             {queryParams.priceType !== 'all' && ` 价格:${getPriceLabel(queryParams.priceType)}`}
             {queryParams.starType !== 'all' && ` 星级:${getStarLabel(queryParams.starType)}`}
@@ -549,6 +563,12 @@ const handleTabClick = (tabName) => {
       // 【核心修改】移除写死的 1000rpx，依靠 SCSS 中的 flex: 1 自动计算高度
     >
       <View className="list-content">
+        {isFallbackAll && queryParams.city && (
+          <View className="fallback-notice">
+            <Text>当前位置暂无酒店，为您推荐以下热门酒店</Text>
+          </View>
+        )}
+        
         {hotelList.map(hotel => (
           <HotelCard 
             key={hotel.id} 
@@ -572,6 +592,20 @@ const handleTabClick = (tabName) => {
               <View className="divider-line"></View>
               <Text className="no-more-text">已经到底啦</Text>
               <View className="divider-line"></View>
+              {!isFallbackAll && queryParams.city && (
+                <View 
+                  className="show-all-btn" 
+                  onClick={() => {
+                    const newParams = { ...queryParams, city: '' };
+                    setQueryParams(newParams);
+                    setPage(1);
+                    setHotelList([]);
+                    fetchHotelData(newParams, 1, sortType, selectedTags);
+                  }}
+                >
+                  <Text>查看所有城市酒店</Text>
+                </View>
+              )}
             </View>
           ) : (
             <Text className="status-loading">上滑加载更多</Text>

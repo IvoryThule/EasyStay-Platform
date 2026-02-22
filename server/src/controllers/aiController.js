@@ -100,3 +100,24 @@ exports.recommend = async (req, res) => {
     return fail(res, '推荐服务异常', 500)
   }
 }
+
+/**
+ * POST /api/ai/generate-slogan
+ * Body: { hotelName, city, tags }
+ */
+exports.generateSlogan = async (req, res) => {
+  try {
+    const { hotelName, city, tags } = req.body
+    if (!hotelName || !city) {
+      return fail(res, '缺少必要参数: hotelName, city')
+    }
+
+    const GLMService = require('../services/GLMService')
+    const slogan = await GLMService.generateHotelSlogan(hotelName, city, tags || [])
+
+    return success(res, { slogan })
+  } catch (err) {
+    console.error('AI Generate Slogan Error:', err)
+    return fail(res, '生成推荐语异常', 500)
+  }
+}

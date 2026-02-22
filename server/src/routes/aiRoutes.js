@@ -16,6 +16,11 @@ router.post('/chat', aiController.chat);
 router.post('/recommend', aiController.recommend);
 
 /**
+ * 生成酒店一句话推荐语
+ */
+router.post('/generate-slogan', aiController.generateSlogan);
+
+/**
  * 🔥 AI 智能订房决策接口 (核心创新)
  * POST /api/ai/smart-search
  * Body: { query: "我和女朋友周末去杭州，预算600，要安静能看江" }

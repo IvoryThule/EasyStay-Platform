@@ -1,8 +1,49 @@
-﻿import React from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { View, Image, Text } from '@tarojs/components';
+import request from '../../utils/request';
 import './index.scss'; 
 
 const HotelCard = ({ data, onClick }) => {
+  const [aiRecommendation, setAiRecommendation] = useState('');
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  useEffect(() => {
+    // 如果后端已经返回了推荐语，直接使用
+    if (data.aiRecommendation) {
+      setAiRecommendation(data.aiRecommendation);
+      return;
+    }
+
+    // 否则，前端调用 AI 接口生成推荐语
+    const fetchAiRecommendation = async () => {
+      if (!data.name || !data.city) return;
+      
+      setLoadingAi(true);
+      try {
+        const res = await request({
+          url: '/ai/generate-slogan',
+          method: 'POST',
+          data: {
+            hotelName: data.name,
+            city: data.city,
+            tags: data.tags || []
+          }
+        });
+
+        if (res.code === 200 && res.data && res.data.slogan) {
+          setAiRecommendation(res.data.slogan);
+        }
+      } catch (error) {
+        console.error('获取AI推荐语失败:', error);
+        // 失败时可以给个默认的或者不显示
+      } finally {
+        setLoadingAi(false);
+      }
+    };
+
+    fetchAiRecommendation();
+  }, [data.id, data.name, data.city, data.tags, data.aiRecommendation]);
+
   if (!data) return null;
 
   return (
@@ -42,10 +83,14 @@ const HotelCard = ({ data, onClick }) => {
 
           {/* 位置与推荐语 */}
           <Text className="hotel-card__location">{data.locationDesc}</Text>
-          {/* 模拟 BOSS 推荐语 */}
-          <View className="hotel-card__highlight">
-            <Text className="highlight-content">BOSS:25楼是沪上知名米其林新荣记</Text>
-          </View>
+          {/* AI 推荐语 */}
+          {(aiRecommendation || loadingAi) && (
+            <View className="hotel-card__highlight">
+              <Text className="highlight-content">
+                {loadingAi ? 'AI正在生成推荐语...' : `AI推荐: ${aiRecommendation}`}
+              </Text>
+            </View>
+          )}
 
           {/* 标签组 */}
           <View className="hotel-card__tags">
