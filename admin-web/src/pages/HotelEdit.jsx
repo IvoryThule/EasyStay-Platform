@@ -11,6 +11,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import request from '../utils/request';
 import { STORAGE_KEYS, API_BASE_URL } from '../utils/constants';
 import dayjs from 'dayjs';
+import './HotelEdit.css';
 
 const { Option } = Select;
 
@@ -18,12 +19,33 @@ const HotelEdit = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
+  const [galleryFileList, setGalleryFileList] = useState([]);
   const [currentStatus, setCurrentStatus] = useState(null);
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   
   const BASE_URL = API_BASE_URL.replace(/\/api$/, '');
+
+  const normalizeUpload = (e) => (Array.isArray(e) ? e : e?.fileList || []);
+
+  const resolveFileUrl = (file) => {
+    const rawUrl = file?.response?.data?.url || file?.response?.url || file?.url || '';
+    return rawUrl ? rawUrl.replace(BASE_URL, '') : '';
+  };
+
+  const buildFileList = (urls = []) => {
+    return urls.filter(Boolean).map((url, index) => {
+      const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+      return {
+        uid: `img-${index}`,
+        name: `image-${index}.png`,
+        status: 'done',
+        url: fullUrl,
+        thumbUrl: fullUrl
+      };
+    });
+  };
 
   // 允许编辑的状态: 2(驳回), 1(已发布-需要重新审核)
   // 只有 status=0 (审核中) 或者是明确传了 readonly 参数时，才是只读
@@ -47,6 +69,12 @@ const HotelEdit = () => {
         setFileList([{ uid: '-1', name: 'image.png', status: 'done', url: fullUrl, thumbUrl: fullUrl }]);
       }
 
+      if (Array.isArray(data.images) && data.images.length > 0) {
+        setGalleryFileList(buildFileList(data.images));
+      } else {
+        setGalleryFileList([]);
+      }
+
       const nameEn = data.tags?.find(t => t.startsWith('EN:'))?.split(':')[1] || '';
       const openingDate = data.tags?.find(t => t.startsWith('OPENING:'))?.split(':')[1];
 
@@ -62,7 +90,8 @@ const HotelEdit = () => {
           id: rt.id, // 关键：保存 id 用于更新
           type_name: rt.name, 
           price: rt.price,
-          stock: rt.stock
+          stock: rt.stock,
+          image: rt.image ? buildFileList([rt.image]) : []
         }))
       });
     } catch (error) {
@@ -78,10 +107,12 @@ const HotelEdit = () => {
       let coverImage = '';
       if (fileList.length > 0) {
         const file = fileList[0];
-        // 如果是新上传的取 response，如果是回显的取 url 并去掉域名
-        const rawUrl = file.response?.data?.url || file.response?.url || file.url || '';
-        coverImage = rawUrl.replace(BASE_URL, '');
+        coverImage = resolveFileUrl(file);
       }
+
+      const galleryImages = galleryFileList
+        .map(resolveFileUrl)
+        .filter(Boolean);
 
       const tags = [
         `EN:${values.name_en || ''}`,
@@ -95,19 +126,25 @@ const HotelEdit = () => {
       })));
 
       // 构建传给后端的 room_types 数组
-      const roomTypesPayload = (values.room_types || []).map(item => ({
-        // 如果有 id 传回 id（更新），否则不传（新增）
-        id: item.id, 
-        name: item.type_name,
-        price: item.price,
-        stock: item.stock
-      }));
+      const roomTypesPayload = (values.room_types || []).map(item => {
+        const roomImageFile = Array.isArray(item.image) ? item.image[0] : null;
+        const roomImage = roomImageFile ? resolveFileUrl(roomImageFile) : '';
+        return {
+          // 如果有 id 传回 id（更新），否则不传（新增）
+          id: item.id, 
+          name: item.type_name,
+          price: item.price,
+          stock: item.stock,
+          image: roomImage
+        };
+      });
 
       const payload = {
         id: id,
         ...values,
         city: Array.isArray(values.city) ? values.city[0] : values.city,
         cover_image: coverImage,
+        images: galleryImages,
         tags: [
           `EN:${values.name_en || ''}`,
           `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
@@ -130,7 +167,7 @@ const HotelEdit = () => {
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
+    <div className="hotel-edit-page">
       <Card 
         title={
           <Space>
@@ -140,6 +177,7 @@ const HotelEdit = () => {
         }
         bordered={false}
         extra={<Button onClick={() => navigate(-1)}>返回</Button>}
+        className="hotel-edit-card"
       >
         <Spin spinning={loading}>
           <Form
@@ -151,19 +189,39 @@ const HotelEdit = () => {
           >
             <Divider orientation="left">基本信息</Divider>
 
-            <Form.Item label="酒店主图" required>
-              <Upload
-                action={`${BASE_URL}/api/upload`}
-                name="file"
-                headers={{ Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.TOKEN)}` }}
-                listType="picture-card"
-                fileList={fileList}
-                onChange={({ fileList }) => setFileList(fileList)}
-                maxCount={1}
-              >
-                {fileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 8 }}>上传</div></div>}
-              </Upload>
-            </Form.Item>
+            <Row gutter={24} className="hotel-edit-upload-row">
+              <Col span={8}>
+                <Form.Item label="酒店主图" required>
+                  <Upload
+                    action={`${BASE_URL}/api/upload`}
+                    name="file"
+                    headers={{ Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.TOKEN)}` }}
+                    listType="picture-card"
+                    fileList={fileList}
+                    onChange={({ fileList }) => setFileList(fileList)}
+                    maxCount={1}
+                  >
+                    {fileList.length < 1 && <div><PlusOutlined /><div style={{ marginTop: 8 }}>上传</div></div>}
+                  </Upload>
+                </Form.Item>
+              </Col>
+              <Col span={16}>
+                <Form.Item label="酒店相册" extra="建议上传 3-6 张高质量图片，提升展示效果">
+                  <Upload
+                    action={`${BASE_URL}/api/upload`}
+                    name="file"
+                    headers={{ Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.TOKEN)}` }}
+                    listType="picture-card"
+                    fileList={galleryFileList}
+                    onChange={({ fileList }) => setGalleryFileList(fileList)}
+                    multiple
+                    maxCount={6}
+                  >
+                    {galleryFileList.length < 6 && <div><PlusOutlined /><div style={{ marginTop: 8 }}>上传</div></div>}
+                  </Upload>
+                </Form.Item>
+              </Col>
+            </Row>
 
             <Row gutter={24}>
               <Col span={12}>
@@ -228,25 +286,46 @@ const HotelEdit = () => {
               {(fields, { add, remove }) => (
                 <>
                   {fields.map(({ key, name, ...restField }) => (
-                    <Row key={key} gutter={16} align="baseline" style={{ background: '#fafafa', padding: '16px', marginBottom: '16px', borderRadius: '8px' }}>
+                    <Row key={key} gutter={16} align="baseline" className="roomtype-row">
                       <Col span={0}>
                          <Form.Item {...restField} name={[name, 'id']} hidden>
                            <Input />
                          </Form.Item>
                       </Col>
-                      <Col span={8}>
+                      <Col span={7}>
                         <Form.Item {...restField} name={[name, 'type_name']} label="房型名称" rules={[{ required: true }]}>
                           <Input placeholder="例：豪华大床房" />
                         </Form.Item>
                       </Col>
-                      <Col span={7}>
+                      <Col span={5}>
                         <Form.Item {...restField} name={[name, 'price']} label="价格">
                           <InputNumber min={0} style={{ width: '100%' }} />
                         </Form.Item>
                       </Col>
-                      <Col span={7}>
+                      <Col span={5}>
                         <Form.Item {...restField} name={[name, 'stock']} label="库存量">
                           <InputNumber min={0} style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={5}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'image']}
+                          label="房型图片"
+                          valuePropName="fileList"
+                          getValueFromEvent={normalizeUpload}
+                        >
+                          <Upload
+                            action={`${BASE_URL}/api/upload`}
+                            name="file"
+                            headers={{ Authorization: `Bearer ${localStorage.getItem(STORAGE_KEYS.TOKEN)}` }}
+                            listType="picture-card"
+                            maxCount={1}
+                          >
+                            {((form.getFieldValue(['room_types', name, 'image']) || []).length < 1) && (
+                              <div><PlusOutlined /><div style={{ marginTop: 8 }}>上传</div></div>
+                            )}
+                          </Upload>
                         </Form.Item>
                       </Col>
                       {!isReadOnly && (

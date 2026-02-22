@@ -1,0 +1,48 @@
+.hotel-edit-page {
+  padding: 24px;
+  background: #f5f7fb;
+  min-height: 100vh;
+}
+
+.hotel-edit-card {
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.hotel-edit-card .ant-card-head {
+  border-bottom: 1px solid #eef2f7;
+  font-weight: 600;
+}
+
+.hotel-edit-upload-row {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.roomtype-row {
+  background: #fafbff;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  border: 1px solid #eef2f7;
+}
+
+.roomtype-row .ant-form-item {
+  margin-bottom: 8px;
+}
+
+.ant-divider-inner-text {
+  color: #1f2937;
+}
+
+.ant-upload.ant-upload-select-picture-card {
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.ant-upload-list-picture-card .ant-upload-list-item {
+  border-radius: 12px;
+}
