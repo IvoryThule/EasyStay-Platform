@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Input, Button, Image } from '@tarojs/components';
-import Taro from '@tarojs/taro';
-import request from '../../utils/request';
-import './index.scss';
+import React, { useState } from 'react'
+import { View, Text, ScrollView, Input, Button, Image } from '@tarojs/components'
+import Taro from '@tarojs/taro'
+import request from '../../utils/request'
+import './index.scss'
 
 const QUICK_QUESTIONS = [
   '我想去北京玩，预算不限，推荐豪华酒店',
   '北京 400 元以内有什么酒店？',
-  '我去上海出差，推荐交通方便的酒店'
-];
+  '这个酒店附近有什么景点？'
+]
 
-const DEFAULT_COVER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945';
+const DEFAULT_COVER = 'https://images.unsplash.com/photo-1566073771259-6a8506099945'
 
 function normalizeImage(url) {
-  if (!url) return DEFAULT_COVER;
-  if (url.startsWith('http')) return url;
-  return `http://1.14.207.212:8848${url}`;
+  if (!url) return DEFAULT_COVER
+  if (url.startsWith('http')) return url
+  return `http://1.14.207.212:8848${url}`
 }
 
 function toMessageId() {
-  return `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  return `msg-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 }
 
 function buildUserMessage(text) {
@@ -31,20 +31,20 @@ function buildUserMessage(text) {
     structured: [],
     cards: [],
     createdAt: Date.now()
-  };
+  }
 }
 
 function buildAssistantMessage(payload) {
-  const messagePayload = payload?.message || {};
-  const type = messagePayload.type || 'text';
-  const text = messagePayload.text || payload?.content || payload?.reply || '抱歉，暂时无法回答。';
-  const structured = Array.isArray(messagePayload.structured) ? messagePayload.structured : [];
+  const messagePayload = payload?.message || {}
+  const type = messagePayload.type || 'text'
+  const text = messagePayload.text || payload?.content || payload?.reply || '抱歉，暂时无法回答。'
+  const structured = Array.isArray(messagePayload.structured) ? messagePayload.structured : []
   const cards = Array.isArray(messagePayload.cards)
     ? messagePayload.cards.map(card => ({
       ...card,
       cover_image: normalizeImage(card.cover_image)
     }))
-    : [];
+    : []
 
   return {
     id: toMessageId(),
@@ -54,14 +54,14 @@ function buildAssistantMessage(payload) {
     structured,
     cards,
     createdAt: Date.now()
-  };
+  }
 }
 
 function toHistory(messages = []) {
   return messages.slice(-10).map(msg => ({
     role: msg.role === 'assistant' ? 'assistant' : 'user',
     content: msg.text
-  }));
+  }))
 }
 
 export default function AiChatPage() {
@@ -70,41 +70,51 @@ export default function AiChatPage() {
       id: toMessageId(),
       role: 'assistant',
       type: 'text',
-      text: '您好，我是 EasyStay 智能助手。告诉我城市、预算和偏好，我会基于真实库内酒店推荐。',
+      text: '您好，我是 EasyStay 智能助手。告诉我城市、预算和偏好，我会基于真实酒店数据推荐；也可以继续问“这个酒店附近有什么景点/美食/地铁”。',
       structured: [],
       cards: [],
       createdAt: Date.now()
     }
-  ]);
+  ])
   const [sessionContext, setSessionContext] = useState({
     city: null,
     budgetIntent: null,
     travelPurpose: null,
-    preferences: []
-  });
-  const [inputValue, setInputValue] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [scrollIntoView, setScrollIntoView] = useState('');
+    preferences: [],
+    lastHotel: null,
+    lastTool: null
+  })
+  const [inputValue, setInputValue] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [scrollIntoView, setScrollIntoView] = useState('')
 
   const appendMessage = (msg) => {
-    setMessages(prev => [...prev, msg]);
-    setScrollIntoView(msg.id);
-  };
+    setMessages(prev => [...prev, msg])
+    setScrollIntoView(msg.id)
+  }
 
   const handleOpenHotelDetail = (card) => {
-    const url = card.detail_path || `/pages/detail/index?id=${card.id}`;
-    Taro.navigateTo({ url });
-  };
+    const url = card.detail_path || `/pages/detail/index?id=${card.id}`
+    Taro.navigateTo({ url })
+  }
+
+  const handleBack = () => {
+    Taro.navigateBack({
+      fail: () => {
+        Taro.switchTab({ url: '/pages/index/index' })
+      }
+    })
+  }
 
   const sendMessage = async (rawText) => {
-    const text = String(rawText || '').trim();
-    if (!text || loading) return;
+    const text = String(rawText || '').trim()
+    if (!text || loading) return
 
-    const userMsg = buildUserMessage(text);
-    const nextMessages = [...messages, userMsg];
-    appendMessage(userMsg);
-    setInputValue('');
-    setLoading(true);
+    const userMsg = buildUserMessage(text)
+    const nextMessages = [...messages, userMsg]
+    appendMessage(userMsg)
+    setInputValue('')
+    setLoading(true)
 
     try {
       const res = await request({
@@ -115,19 +125,19 @@ export default function AiChatPage() {
           history: toHistory(nextMessages),
           sessionContext
         }
-      });
+      })
 
       if (res.code !== 200) {
-        throw new Error(res.msg || '请求失败');
+        throw new Error(res.msg || '请求失败')
       }
 
-      const aiMsg = buildAssistantMessage(res.data || {});
-      appendMessage(aiMsg);
+      const aiMsg = buildAssistantMessage(res.data || {})
+      appendMessage(aiMsg)
       if (res.data?.sessionContext) {
-        setSessionContext(res.data.sessionContext);
+        setSessionContext(res.data.sessionContext)
       }
     } catch (error) {
-      Taro.showToast({ title: '服务异常，请稍后再试', icon: 'none' });
+      Taro.showToast({ title: '服务异常，请稍后再试', icon: 'none' })
       appendMessage({
         id: toMessageId(),
         role: 'assistant',
@@ -136,16 +146,16 @@ export default function AiChatPage() {
         structured: [],
         cards: [],
         createdAt: Date.now()
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <View className="ai-chat-page">
       <View className="chat-header">
-        <Text className="back-btn" onClick={() => Taro.navigateBack()}>‹</Text>
+        <Text className="back-btn" onClick={handleBack}>‹</Text>
         <Text className="title">EasyStay 智能助手</Text>
       </View>
 
@@ -195,7 +205,7 @@ export default function AiChatPage() {
 
         {loading && (
           <View className="msg-row assistant">
-            <View className="bubble">正在为您检索真实酒店数据...</View>
+            <View className="bubble">正在为您查询中...</View>
           </View>
         )}
       </ScrollView>
@@ -213,7 +223,7 @@ export default function AiChatPage() {
           className="input"
           value={inputValue}
           onInput={(e) => setInputValue(e.detail.value)}
-          placeholder="告诉我：城市 + 预算 + 偏好"
+          placeholder="告诉我：城市 + 预算 + 偏好，或问附近信息"
           confirmType="send"
           onConfirm={() => sendMessage(inputValue)}
         />
@@ -222,5 +232,5 @@ export default function AiChatPage() {
         </Button>
       </View>
     </View>
-  );
+  )
 }

@@ -1064,65 +1064,74 @@ $font-weight-bold: 700;
     }
   }
 }
-// ==============================
-// 日历相关样式 - 优化完整版
-// ==============================
-
-// ==============================
-// 日历选择组件 - 样式与布局完整修复版
-// ==============================
-
-// 1. Popup 容器样式 - 适配 TabBar 位置
-
 .home-calendar-wrapper {
-  // 1. 优先尝试修改 CSS 变量（NutUI 样式的源头）
-  --nutui-calendar-day-font-size: 36px !important;
-  --nutui-calendar-day-active-font-size: 36px !important;
-  --nutui-calendar-day-info-font-size: 26px !important;
-
-  .nut-calendar {
-    // 2. 核心：必须直接定位到数字所在的 .nut-calendar-day-value
-    // 之前的修改无效是因为样式没传导到这一层
-    .nut-calendar-day-value {
-      font-size: 36px !important;   // 这里才是真正的数字字体
-      font-weight: 600 !important;  // 加粗一点更清晰
-      display: inline-block !important;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    // 3. 针对下方的小字（“开始”、“结束”、“今天”）
-    .nut-calendar-day-info {
-      font-size: 26px !important;   // 调大下方的提示字
-      line-height: 1.2 !important;
-      margin-top: 4px !important;
-    }
-
-    // 4. 针对选中状态的特殊处理
-    .nut-calendar-day.nut-calendar-day-active {
-      .nut-calendar-day-value {
-        font-size: 38px !important; // 选中时可以再稍微大一点点
-        color: #ffffff !important;
-      }
-      .nut-calendar-day-info {
-        font-size: 26px !important;
-        color: #ffffff !important;
-      }
-    }
-
-    // 5. 星期标题（日、一、二...）
-    .nut-calendar-weekdays .nut-calendar-weekday {
-      font-size: 30px !important;
-      font-weight: bold !important;
-    }
-  }
+  --nutui-calendar-day-font-size: 18px;
+  --nutui-calendar-day-active-font-size: 18px;
+  --nutui-calendar-day-info-font-size: 12px;
+  --nutui-calendar-title-font-size: 18px;
+  --nutui-calendar-month-title-font-size: 16px;
+  --nutui-calendar-day-height: 56px;
 }
 
-// 6. 如果是 H5 端或者开启了样式作用域（Scoped），必须使用 :global 穿透
 :global {
-  .home-calendar-wrapper .nut-calendar-day-value {
-    font-size: 36px !important;
+  .home-calendar-wrapper .nut-calendar {
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    overflow: hidden;
   }
+
+  .home-calendar-wrapper .nut-calendar-title {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    padding: 18px 0 10px !important;
+  }
+
+  .home-calendar-wrapper .nut-calendar-weekdays .nut-calendar-weekday {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+  }
+
+  .home-calendar-wrapper .nut-calendar-month-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+  }
+
+  .home-calendar-wrapper .nut-calendar-day {
+    min-height: 56px !important;
+    border-radius: 14px;
+    margin: 2px 0;
+  }
+
+  .home-calendar-wrapper .nut-calendar-day-value {
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    line-height: 1.1 !important;
+  }
+
   .home-calendar-wrapper .nut-calendar-day-info {
-    font-size: 26px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    color: #64748b !important;
+  }
+
+  .home-calendar-wrapper .nut-calendar-day.nut-calendar-day-active {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%) !important;
+  }
+
+  .home-calendar-wrapper .nut-calendar-day.nut-calendar-day-active .nut-calendar-day-value,
+  .home-calendar-wrapper .nut-calendar-day.nut-calendar-day-active .nut-calendar-day-info {
+    color: #fff !important;
+  }
+
+  .home-calendar-wrapper .nut-calendar-btn {
+    height: 48px !important;
+    line-height: 48px !important;
+    margin: 0 16px 16px !important;
+    border-radius: 12px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
   }
 }

@@ -4,4 +4,4 @@ export default {
   navigationBarTextStyle: 'black',
   backgroundColor: '#f5f9ff',
   enablePullDownRefresh: false
-};
+}

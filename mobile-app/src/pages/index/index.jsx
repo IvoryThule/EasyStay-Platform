@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react'
+﻿import React, { useMemo, useState } from 'react'
 import {
   View,
   Image,
@@ -10,32 +10,34 @@ import {
   SwiperItem
 } from '@tarojs/components'
 import Taro, {
-  getCurrentInstance,
-  useLoad,
-  useReady,
-  useDidShow,
-  usePullDownRefresh,
-  useReachBottom,
-  navigateTo
+  useLoad
 } from '@tarojs/taro'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import './index.scss'
-import { Calendar, Popup } from '@nutui/nutui-react-taro';
+import { Calendar, Popup } from '@nutui/nutui-react-taro'
 import request from '../../utils/request';
 import AiFloatBall from '../../components/AiFloatBall';
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
-// 快速标签数据
-const QUICK_TAGS = [
-  { id: 1, label: '五星级', type: 'star' },
-  { id: 2, label: '网红推荐', type: 'influencer' },
-  { id: 3, label: '亲子酒店', type: 'family' },
-  { id: 4, label: '设计精品', type: 'design' },
-  { id: 5, label: '游泳池', type: 'pool' },
-  { id: 6, label: '美食餐厅', type: 'restaurant' }
+const TAG_RULES = [
+  { label: '五星级', type: 'star', matcher: /(五星|豪华|奢华|高端|5星)/i, fallbackKeyword: '五星级' },
+  { label: '亲子酒店', type: 'facility', matcher: /(亲子|家庭|儿童)/i, fallbackKeyword: '亲子' },
+  { label: '设计精品', type: 'style', matcher: /(设计|艺术|精品)/i, fallbackKeyword: '设计' },
+  { label: '游泳池', type: 'facility', matcher: /(泳池|游泳|无边泳池|pool)/i, fallbackKeyword: '泳池' },
+  { label: '美食餐厅', type: 'facility', matcher: /(餐厅|美食|米其林|早餐)/i, fallbackKeyword: '美食' },
+  { label: '网红推荐', type: 'theme', matcher: /(网红|打卡|热门)/i, fallbackKeyword: '网红' },
+  { label: '近地铁', type: 'traffic', matcher: /(地铁|交通便利|近地铁)/i, fallbackKeyword: '地铁' },
+  { label: '江景房', type: 'view', matcher: /(江景|海景|景观|河景)/i, fallbackKeyword: '江景' }
 ]
+
+const DEFAULT_AI_TAGS = TAG_RULES.slice(0, 6).map((item, index) => ({
+  id: index + 1,
+  label: item.label,
+  type: item.type,
+  keyword: item.fallbackKeyword || item.label
+}))
 
 const PRICE_OPTIONS = [
   { label: '不限', value: 'all' },
@@ -88,9 +90,9 @@ export default function Index() {
   // 新增:热门城市动态数据
   const [popularCities, setPopularCities] = useState(POPULAR_CITIES)
   const [loadingCities, setLoadingCities] = useState(false)
+  const [aiTags, setAiTags] = useState(DEFAULT_AI_TAGS)
 
   const [activeTag, setActiveTag] = useState(null)
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false)
   const [showCityPicker, setShowCityPicker] = useState(false)
   const [currentCity, setCurrentCity] = useState('上海市')
   const [loading, setLoading] = useState(false)
@@ -112,6 +114,65 @@ export default function Index() {
     setIsFilterVisible(false)
   }
 
+  const currentCityName = useMemo(
+    () => String(searchParams.city || '').replace(/市$/, ''),
+    [searchParams.city]
+  )
+
+  const normalizeCity = (city = '') => String(city || '').replace(/市$/, '').trim()
+
+  const safeParseTags = (rawTags) => {
+    if (Array.isArray(rawTags)) return rawTags
+    if (typeof rawTags !== 'string') return []
+    try {
+      const parsed = JSON.parse(rawTags)
+      return Array.isArray(parsed) ? parsed : []
+    } catch (e) {
+      return rawTags.split(/[、,|/ ]+/).filter(Boolean)
+    }
+  }
+
+  const buildAiTagsFromHotels = (hotels = []) => {
+    if (!Array.isArray(hotels) || hotels.length === 0) {
+      return DEFAULT_AI_TAGS
+    }
+
+    const scored = TAG_RULES.map(rule => ({ ...rule, score: 0 }))
+    hotels.forEach((hotel) => {
+      const haystack = [
+        hotel.name,
+        hotel.city,
+        hotel.address,
+        ...(hotel.tags || [])
+      ].join('|')
+
+      scored.forEach((rule) => {
+        if (rule.matcher.test(haystack)) {
+          rule.score += 1
+        }
+      })
+
+      if (Number(hotel.star) >= 5) {
+        const starRule = scored.find(item => item.label === '五星级')
+        if (starRule) starRule.score += 1
+      }
+    })
+
+    const ranked = scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+
+    if (ranked.length === 0) return DEFAULT_AI_TAGS
+
+    return ranked.map((item, index) => ({
+      id: index + 1,
+      label: item.label,
+      type: item.type,
+      keyword: item.fallbackKeyword || item.label
+    }))
+  }
+
 
   // 页面生命周期
   useLoad(() => {
@@ -122,11 +183,13 @@ export default function Index() {
   // 初始化页面数据
   const initPageData = async () => {
     setLoading(true)
+    let cityForQuery = searchParams.city
     try {
       // 1. 获取IP定位
       const locationRes = await request({ url: '/system/location', method: 'GET' })
       if (locationRes.code === 200 && locationRes.data?.city) {
         const detectedCity = locationRes.data.city
+        cityForQuery = detectedCity
         setCurrentCity(detectedCity)
         setSearchParams(prev => ({ ...prev, city: detectedCity }))
       }
@@ -135,10 +198,10 @@ export default function Index() {
       await fetchCityStats()
 
       // 3. 获取推荐酒店(当前城市前4条)
-      await fetchRecommendHotels(searchParams.city)
+      await fetchRecommendHotels(cityForQuery)
 
       // 4. 获取Banner酒店(前3条高星酒店)
-      await fetchBannerHotels(searchParams.city)
+      await fetchBannerHotels(cityForQuery)
     } catch (error) {
       console.error('初始化失败:', error)
     } finally {
@@ -149,7 +212,7 @@ export default function Index() {
   // 获取Banner酒店
   const fetchBannerHotels = async (city) => {
     try {
-      const cleanCity = city.replace(/市$/, '')
+      const cleanCity = normalizeCity(city)
       // 优先获取5星级,如果不足3条则降级到4星
       let res = await request({
         url: '/hotel/list',
@@ -233,23 +296,45 @@ export default function Index() {
   const fetchRecommendHotels = async (city) => {
     setLoadingRecommend(true)
     try {
-      const cleanCity = city.replace(/市$/, '')
+      const cleanCity = normalizeCity(city)
       const res = await request({
         url: '/hotel/list',
         method: 'GET',
         data: { city: cleanCity, limit: 4, sort: 'price_desc' }
       })
-      if (res.code === 200 && res.data?.list) {
-        const formatted = res.data.list.map(item => ({
+      let recommendList = res.code === 200 && Array.isArray(res.data?.list) ? res.data.list : []
+
+      if (recommendList.length < 4) {
+        const fallbackRes = await request({
+          url: '/hotel/list',
+          method: 'GET',
+          data: { limit: 4, sort: 'price_desc' }
+        })
+        if (fallbackRes.code === 200 && Array.isArray(fallbackRes.data?.list)) {
+          const exists = new Set(recommendList.map(item => item.id))
+          const fallback = fallbackRes.data.list.filter(item => !exists.has(item.id))
+          recommendList = [...recommendList, ...fallback].slice(0, 4)
+        }
+      }
+
+      if (recommendList.length > 0) {
+        const formatted = recommendList.map(item => ({
           id: item.id,
           name: item.name,
+          city: item.city,
+          address: item.address,
+          star: item.star,
           price: parseFloat(item.price),
           rating: item.score, // 只使用后端真实评分，没有就不显示
           reviews: item.reviews || 0, // 使用后端真实评价数
           image: item.cover_image?.startsWith('http') ? item.cover_image : `http://1.14.207.212:8848${item.cover_image}`,
-          tags: Array.isArray(item.tags) ? item.tags.filter(t => !t.includes(':')).slice(0, 3) : []
+          tags: safeParseTags(item.tags).filter(tag => !String(tag).includes(':')).slice(0, 4)
         }))
         setRecommendHotels(formatted)
+        setAiTags(buildAiTagsFromHotels(formatted))
+      } else {
+        setRecommendHotels([])
+        setAiTags(DEFAULT_AI_TAGS)
       }
     } catch (error) {
       console.error('获取推荐酒店失败:', error)
@@ -327,13 +412,14 @@ export default function Index() {
     })
   }
   // 处理城市选择
-  const handleCitySelect = (city) => {
+  const handleCitySelect = async (city) => {
     setCurrentCity(city)
     setSearchParams(prev => ({
       ...prev,
       city: city
     }))
     setShowCityPicker(false)
+    await Promise.all([fetchRecommendHotels(city), fetchBannerHotels(city)])
   }
   const openCalendar = (e) => {
 
@@ -343,48 +429,36 @@ export default function Index() {
 
   };
 
-  const handleDateSelect = () => {
-
-    // 在实际项目中，这里会弹出日期选择器组件
-    Taro.showToast({
-      title: '日期选择功能开发中',
-      icon: 'none',
-      duration: 2000
-    })
-  }
   // 处理快速标签点击
   const handleTagClick = (tag) => {
     setActiveTag(tag.id)
-    console.log('选中标签:', tag)
+    const resolvedKeyword = tag.keyword || tag.label
+    const nextKeyword = resolvedKeyword === '五星级' ? '' : resolvedKeyword
+    const starType = tag.label === '五星级' ? '5' : filterParams.star.value
 
+    setSearchParams(prev => ({
+      ...prev,
+      keyword: nextKeyword
+    }))
 
-
-    // 根据标签类型执行不同操作
-    switch (tag.type) {
-      case 'star':
-        navigateTo({
-          url: '/pages/filter/index?type=star&value=5'
-        })
-        break
-      case 'family':
-        navigateTo({
-          url: '/pages/filter/index?type=facility&value=family'
-        })
-        break
-      default:
-        // 在搜索框中添加标签关键词
-        setSearchParams(prev => ({
-          ...prev,
-          keyword: tag.label
-        }))
+    const queryObj = {
+      city: searchParams.city,
+      keyword: nextKeyword,
+      checkInDate: searchParams.checkInDate,
+      checkOutDate: searchParams.checkOutDate,
+      days: searchParams.nights,
+      priceType: filterParams.price.value,
+      starType
     }
+    Taro.setStorageSync('hotelSearchParams', queryObj)
+    Taro.switchTab({ url: '/pages/list/index' })
   }
 
   // 处理酒店点击
   const handleHotelClick = (hotel) => {
     console.log('点击酒店:', hotel.name)
-    navigateTo({
-      url: `/pages/hotel-detail/index?id=${hotel.id}`
+    Taro.navigateTo({
+      url: `/pages/detail/index?id=${hotel.id}&checkIn=${searchParams.checkInDate}&checkOut=${searchParams.checkOutDate}`
     })
   }
 
@@ -429,6 +503,7 @@ export default function Index() {
           ...prev,
           city: locationName
         }))
+        await Promise.all([fetchRecommendHotels(locationName), fetchBannerHotels(locationName)])
 
         Taro.showToast({
           title: `已定位到: ${locationName}`,
@@ -468,7 +543,7 @@ export default function Index() {
             {popularCities.map(city => (
               <View
                 key={city.id}
-                className={`city-item ${currentCity.includes(city.name) ? 'active' : ''}`}
+                className={`city-item ${currentCityName.includes(city.name) ? 'active' : ''}`}
                 onClick={() => handleCitySelect(city.name)}
               >
                 <Text className="city-name">{city.name}</Text>
@@ -695,7 +770,7 @@ export default function Index() {
             showScrollbar={false}
           >
             <View className="tags-container">
-              {QUICK_TAGS.map(tag => (
+              {aiTags.map(tag => (
                 <View
                   key={tag.id}
                   className={`tag-item ${activeTag === tag.id ? 'active' : ''}`}
@@ -855,8 +930,8 @@ export default function Index() {
     closeable
     // safeAreaInsetBottom // 建议注释掉，我们在 CSS 中精确控制
     style={{
-      height: '85%', // 统一设为 85%
-      '--nutui-calendar-confirm-btn-height': '72px',
+      height: '88%',
+      '--nutui-calendar-confirm-btn-height': '48px',
     }}
   />
 )}
@@ -889,7 +964,7 @@ export default function Index() {
                 <View
 
                   key={city.id}
-                  className={`picker-item ${currentCity.includes(city.name) ? 'selected' : ''}`}
+                  className={`picker-item ${currentCityName.includes(city.name) ? 'selected' : ''}`}
                   onClick={() => handleCitySelect(city.name)}
                 >
                   <Text className="picker-item-name">{city.name}</Text>
@@ -904,3 +979,4 @@ export default function Index() {
     </View>
   )
 }
+

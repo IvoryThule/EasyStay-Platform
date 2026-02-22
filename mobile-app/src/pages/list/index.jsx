@@ -1,11 +1,10 @@
 ﻿// pages/list/index.jsx
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { View, Text, ScrollView, Image, Input } from '@tarojs/components'
-import Taro, { getCurrentInstance, navigateBack, useLoad, useDidShow,switchTab } from '@tarojs/taro'
+import Taro, { useLoad, useDidShow, switchTab } from '@tarojs/taro'
 import { Popup } from '@nutui/nutui-react-taro'
 import HotelCard from '../../components/HotelCard' // 引入卡片组件
 import './index.scss'
-import { IoIosSearch } from "react-icons/io";
 import request from '../../utils/request'
 
 const IMAGE_HOST = 'http://1.14.207.212:8848';
@@ -35,7 +34,7 @@ export default function HotelList() {
   
   // 搜索条件状态 (初始化时从路由获取)
   const [queryParams, setQueryParams] = useState({
-    city: '上海',
+    city: '',
     checkInDate: '',
     checkOutDate: '',
     keyword: '',
@@ -65,6 +64,7 @@ export default function HotelList() {
   // 将 loadSearchParams 从 useLoad 移出，放入 useDidShow
   // --- 初始化标识，只加载一次 ---
   const hasInitialized = useRef(false)
+  const lastSearchSignature = useRef('')
 
   useLoad(() => {
     console.log('列表页加载（仅在页面销毁后重新进入时触发）')
@@ -72,23 +72,23 @@ export default function HotelList() {
 
   useDidShow(() => {
     console.log('列表页显示（每次切回或进入该页都会触发）')
-    if (!hasInitialized.current) {
-      // 首次进入页面，读取缓存初始化
+    const cachedParams = Taro.getStorageSync('hotelSearchParams') || {}
+    const signature = JSON.stringify(cachedParams)
+    if (!hasInitialized.current || (signature && signature !== lastSearchSignature.current)) {
       hasInitialized.current = true
-      loadSearchParams()
+      lastSearchSignature.current = signature
+      loadSearchParams(cachedParams)
     }
-    // 从详情页返回时不重置筛选，保持当前筛选状态
   })
 
   // --- 修改点 2: 完善 loadSearchParams 逻辑 ---
-  const loadSearchParams = () => {
-    // 1. 立即获取最新缓存
-    const cachedParams = Taro.getStorageSync('hotelSearchParams')
+  const loadSearchParams = (incomingParams) => {
+    const cachedParams = incomingParams || Taro.getStorageSync('hotelSearchParams') || {}
     console.log('【检测缓存同步】:', cachedParams)
 
-    // 2. 确定最终使用的参数 - 始终不限制城市,显示所有酒店
+    const normalizedCity = String(cachedParams.city || '').replace(/市$/, '').trim()
     let newParams = {
-      city: '', // 不限城市,显示所有酒店
+      city: normalizedCity,
       checkInDate: cachedParams?.checkInDate || '',
       checkOutDate: cachedParams?.checkOutDate || '',
       keyword: cachedParams?.keyword || '',
@@ -103,31 +103,39 @@ export default function HotelList() {
       star: newParams.starType
     });
 
+    setSelectedTags([])
+    setHasMore(true)
     // 4. 重要：重置列表并使用 newParams 直接请求数据
     setPage(1); 
     setHotelList([]); 
-    fetchHotelData(newParams, 1); 
+    fetchHotelData(newParams, 1, sortType, [])
   }
   
   // 3. 模拟 API 请求方法
   
   // --- 1. 核心数据请求方法 ---
-  const fetchHotelData = async (params, pageNo = 1, currentSort = sortType) => {
+  const fetchHotelData = async (params, pageNo = 1, currentSort = sortType, tags = selectedTags) => {
   if (loading) return; // 必须在这里拦截，防止重复请求
   setLoading(true);
 
   const { min, max } = getPriceRange(params.priceType);
+  const selectedTagKeywords = (tags || [])
+    .filter(tag => tag !== '五星级')
+    .map(tag => TAG_KEYWORD_MAP[tag] || tag)
+  const mergedKeyword = [params.keyword, ...selectedTagKeywords].filter(Boolean).join(' ')
   
   const apiQuery = {
     page: pageNo,
     limit: 10
   };
 
-  // 始终不添加city条件,显示所有酒店
-  // 用户可以通过关键词搜索来筛选特定城市
+  if (params.city) apiQuery.city = String(params.city).replace(/市$/, '').trim()
   
-  if (params.keyword) apiQuery.keyword = params.keyword;
+  if (mergedKeyword) apiQuery.keyword = mergedKeyword;
   if (params.starType && params.starType !== 'all') apiQuery.star = params.starType;
+  if ((!params.starType || params.starType === 'all') && (tags || []).includes('五星级')) {
+    apiQuery.star = '5'
+  }
   if (min !== undefined) apiQuery.min_price = min;
   if (max !== undefined) apiQuery.max_price = max;
   
@@ -144,15 +152,37 @@ export default function HotelList() {
     if (res.code === 200) {
       const { list: rawList, total } = res.data;
       
-      const formatted = rawList.map(item => ({
-        ...item,
-        imageUrl: item.cover_image?.startsWith('http') 
-                  ? item.cover_image 
-                  : `${IMAGE_HOST}${item.cover_image}`, 
-        tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
-        locationDesc: item.address,
-        score: item.score // 只使用后端真实评分
-      }));
+      let formatted = rawList.map(item => {
+        let parsedTags = item.tags || []
+        if (typeof item.tags === 'string') {
+          try {
+            parsedTags = JSON.parse(item.tags)
+          } catch (e) {
+            parsedTags = item.tags.split(/[、,|/ ]+/).filter(Boolean)
+          }
+        }
+        return {
+          ...item,
+          imageUrl: item.cover_image?.startsWith('http')
+            ? item.cover_image
+            : `${IMAGE_HOST}${item.cover_image}`,
+          tags: parsedTags,
+          locationDesc: item.address,
+          score: item.score // 只使用后端真实评分
+        }
+      })
+
+      if (currentSort === 'rating') {
+        formatted = [...formatted].sort((a, b) => Number(b.score || 0) - Number(a.score || 0))
+      }
+      if (currentSort === 'distance' && params.city) {
+        const cityToken = String(params.city).replace(/市$/, '').trim()
+        formatted = [...formatted].sort((a, b) => {
+          const aScore = String(a.city || '').includes(cityToken) ? 0 : 1
+          const bScore = String(b.city || '').includes(cityToken) ? 0 : 1
+          return aScore - bScore
+        })
+      }
 
       // --- 【修改点】分页拼接逻辑 ---
       if (pageNo === 1) {
@@ -174,24 +204,6 @@ export default function HotelList() {
   }
 };
 
-  // --- 3. 生命周期统一处理 ---
-  useDidShow(() => {
-    const cachedParams = Taro.getStorageSync('hotelSearchParams');
-    if (cachedParams) {
-      const newParams = {
-        city: cachedParams.city || '上海',
-        checkInDate: cachedParams.checkInDate || '',
-        checkOutDate: cachedParams.checkOutDate || '',
-        keyword: cachedParams.keyword || '',
-        priceType: cachedParams.priceType || 'all',
-        starType: cachedParams.starType || 'all'
-      };
-      setQueryParams(newParams);
-      setPage(1); // 重置分页
-      fetchHotelData(newParams, 1); // 立即发起请求
-    }
-  });
-
   // 4. 事件处理
   // 加载更多
   const handleLoadMore = () => {
@@ -208,7 +220,7 @@ export default function HotelList() {
 
   const nextPage = page + 1;
   setPage(nextPage);
-  fetchHotelData(queryParams, nextPage, sortType);
+  fetchHotelData(queryParams, nextPage, sortType, selectedTags);
 };
 
   // 处理关键词搜索
@@ -220,7 +232,7 @@ export default function HotelList() {
     setQueryParams(newParams)
     setPage(1)
     setHotelList([])
-    fetchHotelData(newParams, 1)
+    fetchHotelData(newParams, 1, sortType, selectedTags)
   }
 
   // 确认筛选
@@ -234,7 +246,7 @@ export default function HotelList() {
     setPage(1) // 重置页码
     setHotelList([]) // 清空列表
     setShowFilterPopup(false) // 关闭弹窗
-    fetchHotelData(newParams, 1) // 重新请求
+    fetchHotelData(newParams, 1, sortType, selectedTags) // 重新请求
   }
 
   const handleSelectSort = (val) => {
@@ -242,7 +254,7 @@ export default function HotelList() {
     setActiveTab('');
     setPage(1);
     // 注意：这里要直接传入最新的 val，因为 setSortType 是异步的
-    fetchHotelData(queryParams, 1, val);
+    fetchHotelData(queryParams, 1, val, selectedTags);
   };
 
 
@@ -306,18 +318,37 @@ const formatDate = (dateStr, format = 'MM-DD') => {
 };
 
 // 1. 在组件内部定义标签数据（或放在外部常量）
-const QUICK_FILTERS = ['双床房', '含早餐', '免费取消', '亲子优选', '智能家居', '江景房', '地铁周边', '五星级', '泳池'];
+const QUICK_FILTERS = ['双床房', '含早餐', '免费取消', '亲子优选', '智能家居', '江景房', '地铁周边', '五星级', '泳池']
+const TAG_KEYWORD_MAP = {
+  双床房: '双床',
+  含早餐: '早餐',
+  免费取消: '免费取消',
+  亲子优选: '亲子',
+  智能家居: '智能',
+  江景房: '江景',
+  地铁周边: '地铁',
+  泳池: '泳池'
+}
 
 // 2. 在 Index 或 List 组件内
 const [selectedTags, setSelectedTags] = useState([]); // 选中的标签数组
 
 const toggleTag = (tag) => {
-  // 实现多选逻辑：如果已选则移除，未选则加入
-  setSelectedTags(prev => 
-    prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-  );
-  // 这里后续可以调用 API 重新加载数据
-};
+  let nextSelected = []
+  setSelectedTags(prev => {
+    nextSelected = prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    return nextSelected
+  })
+
+  const nextParams = {
+    ...queryParams,
+    starType: nextSelected.includes('五星级') ? '5' : (queryParams.starType === '5' ? 'all' : queryParams.starType)
+  }
+  setQueryParams(nextParams)
+  setPage(1)
+  setHotelList([])
+  fetchHotelData(nextParams, 1, sortType, nextSelected)
+}
 
 // 1. 定义状态
 const [activeTab, setActiveTab] = useState(''); // 当前点击的分类：'welcome' | 'distance' | 'price'
@@ -332,6 +363,10 @@ const welcomeOptions = [
 
 // 3. 点击处理
 const handleTabClick = (tabName) => {
+  if (tabName === 'distance') {
+    handleSelectSort('distance')
+    return
+  }
   if (activeTab === tabName) {
     setActiveTab(''); // 再次点击关闭
   } else {
@@ -358,7 +393,7 @@ const handleTabClick = (tabName) => {
             
             {/* 城市部分 */}
             <View className="capsule-section city-section">
-              <Text className="city-name">{queryParams.city}</Text>
+              <Text className="city-name">{queryParams.city || '不限城市'}</Text>
               <View className="section-divider"></View>
             </View>
             
@@ -463,7 +498,7 @@ const handleTabClick = (tabName) => {
 
         {/* 位置距离 */}
         <View 
-          className={`sort-item ${activeTab === 'distance' ? 'active' : ''}`}
+          className={`sort-item ${sortType === 'distance' ? 'active' : ''}`}
           hoverClass="sort-item--hover"
           onClick={() => handleTabClick('distance')}
         >
@@ -491,10 +526,11 @@ const handleTabClick = (tabName) => {
       </View>
 
       {/* 【核心修改】将当前筛选条件摘要移入 sticky-header 内部，确保它不随列表滑走 */}
-      {(queryParams.keyword || queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
+      {(queryParams.city || queryParams.keyword || queryParams.priceType !== 'all' || queryParams.starType !== 'all') && (
         <View className="filter-summary">
           <Text className="summary-text">
             当前筛选:
+            {queryParams.city && ` 城市:${queryParams.city}`}
             {queryParams.keyword && ` "${queryParams.keyword}"`}
             {queryParams.priceType !== 'all' && ` 价格:${getPriceLabel(queryParams.priceType)}`}
             {queryParams.starType !== 'all' && ` 星级:${getStarLabel(queryParams.starType)}`}

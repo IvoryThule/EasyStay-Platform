@@ -81,7 +81,39 @@ const getNearbyPOI = async (longitude, latitude, types = '旅游景点|地铁站
     }
 };
 
+/**
+ * 根据地址解析经纬度
+ * 文档: https://lbs.amap.com/api/webservice/guide/api/georegeo
+ */
+const getLocationByAddress = async (address, city = '') => {
+    if (!AMAP_KEY || !address) {
+        return null;
+    }
+
+    try {
+        const encodedAddress = encodeURIComponent(address);
+        const encodedCity = encodeURIComponent(city || '');
+        const url = `https://restapi.amap.com/v3/geocode/geo?key=${AMAP_KEY}&address=${encodedAddress}&city=${encodedCity}`;
+        const response = await axios.get(url);
+
+        if (response.data.status === '1' && Array.isArray(response.data.geocodes) && response.data.geocodes[0]) {
+            const location = response.data.geocodes[0].location || '';
+            const [longitude, latitude] = location.split(',');
+            if (!longitude || !latitude) return null;
+            return {
+                longitude: Number(longitude),
+                latitude: Number(latitude)
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Amap Geocode Service Error:', error.message);
+        return null;
+    }
+};
+
 module.exports = {
     getLocationByIP,
-    getNearbyPOI
+    getNearbyPOI,
+    getLocationByAddress
 };

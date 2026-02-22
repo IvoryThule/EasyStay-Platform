@@ -23,23 +23,21 @@ $text-secondary: #6b7280;
   background: #fff;
   z-index: 1000;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 6px);
 }
 
 .list-scroll {
-  flex: 1;                 // 【核心】占据页面剩下的所有高度
-  min-height: 0;           // 【必填】修复 Flex 内部滚动溢出的经典 Bug
-  width: 100%;
-  overflow-y: scroll;      // 确保纵向滚动开启
-  background: #fff;
+  flex: 1;
   min-height: 0;
-  
-  // 不要在这里写 height: 100vh，否则它会超出屏幕
+  width: 100%;
+  overflow-y: scroll;
+  background: #fff;
 }
 
 // ==================== 1. 搜索胶囊区域 ====================
 // 整体设计参考HTML代码
 .search-bar {
-  padding: 12px 16px 10px;
+  padding: 8px 16px 10px;
   background: #fff;
   
   .search-capsule-container {
@@ -522,11 +520,7 @@ $text-secondary: #6b7280;
   scrollbar-width: none;
 }
 
-.quick-filter-tags,
 .list-scroll {
-  flex: 1;              // 新增：自动填满剩下高度
-  height: 0;            // 新增：触发 BFC 计算
-  overflow-y: scroll;
   @extend .hide-scrollbar;
 }
 .popup-body {
