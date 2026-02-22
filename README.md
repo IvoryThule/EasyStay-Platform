@@ -165,7 +165,7 @@ EasyStay-Platform/
 │   │   │   ├── hotelRoutes.js      # [API] /api/hotel (CRUD, list, detail)
 │   │   │   ├── orderRoutes.js      # [API] /api/order (create, list)
 │   │   │   ├── uploadRoutes.js     # [API] /api/upload (图片上传)
-│   │   │   ├── aiRoutes.js         # [API] /api/ai (chat)
+│   │   │   ├── aiRoutes.js         # [API] /api/ai (chat, generate-slogan)
 │   │   │   └── systemRoutes.js     # [API] /api/system (location, config)
 │   │   ├── controllers/            # [逻辑]
 │   │   │   ├── authController.js   # [代码] 登录注册逻辑
@@ -173,7 +173,7 @@ EasyStay-Platform/
 │   │   │   ├── orderController.js  # [代码] 下单逻辑
 │   │   │   └── aiController.js     # [代码] 构造 Prompt 调用 Service
 │   │   ├── services/               # [外部服务]
-│   │   │   ├── GLMService.js       # [封装] 调用 GLM API
+│   │   │   ├── GLMService.js       # [封装] 调用 GLM API (System Prompts)
 │   │   │   └── amapService.js      # [封装] 调用高德 Web 服务 API
 │   │   └── utils/
 │   │       ├── response.js         # [工具] 统一返回格式 {code, msg, data}
