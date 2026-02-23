@@ -10,7 +10,7 @@ const { success, fail } = require('../utils/response');
 const create = async (req, res) => {
   try {
     // 从请求体中解构酒店字段
-    const { 
+    let { 
         name, address, city, price, star, 
         tags, cover_image, images, latitude, longitude 
     } = req.body;
@@ -22,6 +22,56 @@ const create = async (req, res) => {
       return fail(res, 'Missing required fields: name, address, city, price', 400);
     }
 
+    tags = tags || [];
+    
+    // --- [NEW] AI 自动打标逻辑 ---
+    // 检查是否包含有实质内容的业务标签（排除 EN:, OPENING: 等系统标签）
+    if (Array.isArray(tags)) { // 确保 tags 是数组
+      const hasBusinessTags = tags.some(t => 
+        typeof t === 'string' && !t.startsWith('EN:') && !t.startsWith('OPENING:') && !t.startsWith('IMAGES:') && !t.startsWith('ROOMDATA:')
+      );
+
+      if (!hasBusinessTags) {
+        // 如果没有业务标签，尝试调用 AI 生成
+        try {
+          const GLMService = require('../services/GLMService'); 
+          const glm = new GLMService();
+          
+          // 构造 prompt
+          const prompt = `酒店名称：${name}
+          地址：${city} ${address}
+          价格：${price}元
+          星级：${star}星`;
+          
+          console.log('触发 AI 自动打标...');
+          // 调用 GLMService 的 generateText 方法
+          const aiResponse = await glm.generateText(prompt, 'HOTEL_TAG_GENERATOR');
+          
+          // 尝试解析 AI 返回的内容
+          let aiTags = [];
+          if (aiResponse) {
+              // 清洗掉可能的括号、引号
+              const cleanResponse = aiResponse.replace(/\[|\]|"/g, ''); 
+              // 分割并过滤
+              aiTags = cleanResponse
+                  .split(/[,，、\n]+/)     // 支持中英文逗号、顿号、换行
+                  .map(t => t.trim())      // 去除首尾空格
+                  .filter(t => t.length > 0 && t.length < 10); // 只要长度合理的非空字符串
+          }
+          
+          if (aiTags.length > 0) {
+              console.log('AI自动生成标签:', aiTags);
+              // 将生成的标签追加到 tags 数组中，最多取 5 个
+              tags = [...tags, ...aiTags.slice(0, 5)]; 
+          }
+
+        } catch (aiError) {
+          console.error('AI自动打标失败，跳过', aiError);
+          // AI 失败不影响主流程
+        }
+      }
+    }
+    
     // 创建酒店记录(状态默认为 0：审核中)
     const hotelData = {
       name,
@@ -29,7 +79,7 @@ const create = async (req, res) => {
       city,
       price,
       star,
-      tags: tags || [], // 防止 null
+      tags: tags, 
       cover_image,
       images: images || [], // 防止 null
       latitude,

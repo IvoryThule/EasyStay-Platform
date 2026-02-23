@@ -114,11 +114,17 @@ const HotelEdit = () => {
         .map(resolveFileUrl)
         .filter(Boolean);
 
-      const tags = [
-        `EN:${values.name_en || ''}`,
-        `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`
-      ];
+      // 整合标签：用户输入的业务标签 + 系统字段(英文名/开业时间等)
+      // 注意：后端 create/update 接口会接收 tags 数组
+      let finalTags = [];
+      if (values.business_tags && Array.isArray(values.business_tags)) {
+        finalTags = [...values.business_tags];
+      }
+      // 补充系统特殊标签
+      if (values.name_en) finalTags.push(`EN:${values.name_en}`);
+      if (values.opening_date) finalTags.push(`OPENING:${values.opening_date.format('YYYY-MM-DD')}`);
 
+      // 兼容旧逻辑
       const roomTypesJson = JSON.stringify((values.room_types || []).map(item => ({
         name: item.type_name,
         price: item.price,
@@ -145,11 +151,7 @@ const HotelEdit = () => {
         city: Array.isArray(values.city) ? values.city[0] : values.city,
         cover_image: coverImage,
         images: galleryImages,
-        tags: [
-          `EN:${values.name_en || ''}`,
-          `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
-          `ROOMDATA:${roomTypesJson}` // 保留以兼容旧逻辑，但主要依靠 room_types
-        ],
+        tags: finalTags, // 使用整合后的标签数组
         room_types: roomTypesPayload, // 新增：显式传递房型数据
         status: 0 
       };
@@ -232,6 +234,19 @@ const HotelEdit = () => {
               <Col span={12}>
                 <Form.Item name="name_en" label="英文名称/拼音">
                   <Input prefix={<TranslationOutlined />} placeholder="Cloud Hotel" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {/* 新增: 标签输入 */}
+            <Row gutter={24}>
+              <Col span={24}>
+                <Form.Item name="business_tags" label="业务标签 (可留空，AI将自动补充)">
+                  <Select 
+                    mode="tags"
+                    placeholder="输入标签后回车，例如：亲子优选、免费停车、近地铁" 
+                    tokenSeparators={[',', '，', ' ']} // 支持逗号或空格分隔
+                  />
                 </Form.Item>
               </Col>
             </Row>

@@ -175,6 +175,50 @@ export default function HotelList() {
             parsedTags = item.tags.split(/[、,|/ ]+/).filter(Boolean)
           }
         }
+        
+        // 过滤掉内部使用的特殊标签 (EN:, OPENING:, IMAGES:, ROOMDATA:)
+        if (Array.isArray(parsedTags)) {
+          parsedTags = parsedTags.filter(tag => {
+            if (typeof tag !== 'string') return false;
+            return !tag.startsWith('EN:') && 
+                   !tag.startsWith('OPENING:') && 
+                   !tag.startsWith('IMAGES:') && 
+                   !tag.startsWith('ROOMDATA:');
+          });
+        }
+        
+        // --- 兜底策略：如果过滤后没有有效标签，尝试从其他字段提取 ---
+        if (!parsedTags || parsedTags.length === 0) {
+            parsedTags = [];
+            // 策略 1:根据星级补充
+            if (item.star >= 5) parsedTags.push('豪华型');
+            else if (item.star >= 4) parsedTags.push('高档型');
+            else if (item.star >= 3) parsedTags.push('舒适型');
+            else parsedTags.push('经济型');
+            
+            // 策略 2:根据设施补充 (取前 2 个短标签)
+            if (item.facilities) {
+                try {
+                    const facs = typeof item.facilities === 'string' ? JSON.parse(item.facilities) : item.facilities;
+                    if (Array.isArray(facs)) {
+                        facs.slice(0, 3).forEach(f => {
+                            const fName = typeof f === 'string' ? f : f.name;
+                            if (fName && fName.length <= 4 && !parsedTags.includes(fName)) {
+                                parsedTags.push(fName);
+                            }
+                        });
+                    }
+                } catch (e) {}
+            }
+            
+            // 策略 3:根据价格补充
+            if (item.price >= 1000) parsedTags.push('高端奢华');
+            else if (item.price < 300) parsedTags.push('超值优惠');
+        }
+
+        // 限制标签数量，最多显示 3-4 个
+        parsedTags = parsedTags.slice(0, 4);
+
         return {
           ...item,
           imageUrl: item.cover_image?.startsWith('http')

@@ -29,7 +29,7 @@ fi
 cd "$REPO_DIR"
 git fetch --all
 git reset --hard origin/$BRANCH
-git clean -fd
+git clean -fd -e server/uploads/
 
 # 2. 部署后端
 echo ">>> Step 2: 部署后端 (Server)..." | tee -a "$LOGFILE"
@@ -39,9 +39,11 @@ if [ ! -f .env ]; then
 fi
 npm install --production --silent
 # 确保 upload 目录存在并有权限
-mkdir -p uploads
-chmod -R 775 uploads
-chown -R $USER:$WWW_USER uploads
+UPLOAD_DIR="$PROJECT_ROOT/uploads"
+
+mkdir -p "$UPLOAD_DIR"
+chmod -R 775 "$UPLOAD_DIR"
+chown -R $USER:$WWW_USER "$UPLOAD_DIR"
 
 # 使用 PM2 重启 (进程名 easystay-api)
 if command -v pm2 >/dev/null; then
