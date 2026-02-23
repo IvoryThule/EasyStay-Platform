@@ -76,10 +76,34 @@ async function initDB() {
 
     // 3. 创建房型
     await RoomType.bulkCreate([
-      { name: '豪华江景房', price: 5200, stock: 5, hotel_id: hotel1.id },
-      { name: '行政套房', price: 8800, stock: 2, hotel_id: hotel1.id },
-      { name: '标准大床房', price: 350, stock: 20, hotel_id: hotel2.id },
-      { name: '商务双床房', price: 380, stock: 15, hotel_id: hotel2.id }
+      { 
+        name: '豪华江景房', 
+        price: 5200, 
+        stock: 5, 
+        hotel_id: hotel1.id,
+        image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427'
+      },
+      { 
+        name: '行政套房', 
+        price: 8800, 
+        stock: 2, 
+        hotel_id: hotel1.id,
+        image: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32'
+      },
+      { 
+        name: '标准大床房', 
+        price: 350, 
+        stock: 20, 
+        hotel_id: hotel2.id,
+        image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304'
+      },
+      { 
+        name: '商务双床房', 
+        price: 380, 
+        stock: 15, 
+        hotel_id: hotel2.id,
+        image: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20c'
+      }
     ]);
 
     console.log(`
