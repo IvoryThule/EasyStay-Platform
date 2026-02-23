@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import { 
   PlusOutlined, BookOutlined, EnvironmentOutlined, 
-  MinusCircleOutlined, ShopOutlined, TranslationOutlined
+  MinusCircleOutlined, ShopOutlined, TranslationOutlined, RobotOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import request from '../utils/request';
@@ -47,14 +47,17 @@ const HotelEdit = () => {
 
       const nameEn = data.tags?.find(t => t.startsWith('EN:'))?.split(':')[1] || '';
       const openingDate = data.tags?.find(t => t.startsWith('OPENING:'))?.split(':')[1];
-
-      form.setFieldsValue({
+      // 增加：从 tags 中提取 DESC
+    const description = data.tags?.find(t => t.startsWith('DESC:'))?.split(':')[1] || '';
+      
+    form.setFieldsValue({
         name: data.name,
         name_en: nameEn,
         address: data.address,
         city: data.city ? [data.city] : [],
         star: data.star,
         price: data.price,
+        description: data.description, // 赋值介绍
         opening_date: openingDate ? dayjs(openingDate) : null,
         room_types: (data.roomTypes || data.room_types || []).map(rt => ({
           type_name: rt.name, 
@@ -68,6 +71,45 @@ const HotelEdit = () => {
       setLoading(false);
     }
   };
+
+// 新增：AI 生成介绍逻辑
+ const handleAIGenerate = async () => {
+  const hotelName = form.getFieldValue('name');
+  
+  // 校验：确保有名称，否则 AI 无法生成
+  if (!hotelName || hotelName.trim() === '') {
+    return message.warning('请先输入酒店名称，AI 将根据名称为您生成介绍');
+  }
+
+  setLoading(true);
+  try {
+    // 接口路径：/ai/chat
+    // 拦截器会自动附加 Authorization Header
+    const res = await request.post('/ai/chat', { 
+      prompt: `请为位于${form.getFieldValue('city') || ''}的“${hotelName}”酒店写一段100字左右的简短介绍，突出其特色。` 
+    });
+
+    
+    if (res && res.code === 200) {
+      if (res.data && res.data.content) {
+        form.setFieldsValue({ description: res.data.content });
+        message.success('AI 生成介绍成功');
+      } else {
+        message.warning('AI 返回内容为空，请稍后重试');
+      }
+    } else {
+      // 处理后端返回的业务错误 (res.code !== 200)
+      message.error(res.msg || 'AI 服务异常');
+    }
+  } catch (error) {
+    // 捕获 500 等 HTTP 错误
+    console.error('AI API Error Detail:', error.response?.data || error.message);
+    const errorMsg = error.response?.data?.msg || '服务器内部错误 (500)，请检查 AI 接口是否正常运行';
+    message.error(errorMsg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -99,6 +141,7 @@ const HotelEdit = () => {
         tags: [
         `EN:${values.name_en || ''}`,
         `OPENING:${values.opening_date ? values.opening_date.format('YYYY-MM-DD') : ''}`,
+        `DESC:${values.description || ''}`, // 保存 AI 生成的简介
         `ROOMDATA:${roomTypesJson}`
         ],
         status: 0 
@@ -209,6 +252,31 @@ const HotelEdit = () => {
                 </Form.Item>
               </Col>
             </Row>
+
+ {/* 新增：酒店介绍字段与 AI 生成按钮 */}
+            <Form.Item 
+              label={
+                <
+Space>
+                  <span>酒店介绍</span>
+                  {!isReadOnly && (
+                    <Button 
+                      type="link" 
+                      size="small" 
+                      icon={<RobotOutlined />
+} 
+                      onClick={handleAIGenerate}
+                    >
+                      AI 生成介绍
+                    </Button>
+                  )}
+                </Space>
+              } 
+              name="description"
+            >
+              <Input.TextArea rows={3} placeholder="请输入酒店介绍或点击 AI 生成" />
+            </Form.Item>
+
 
             <Divider orientation="left">房型配置</Divider>
             <Form.List name="room_types">
