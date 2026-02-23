@@ -133,8 +133,18 @@ const HotelEdit = () => {
 
       // 构建传给后端的 room_types 数组
       const roomTypesPayload = (values.room_types || []).map(item => {
-        const roomImageFile = Array.isArray(item.image) ? item.image[0] : null;
-        const roomImage = roomImageFile ? resolveFileUrl(roomImageFile) : '';
+        let roomImage = '';
+        if (Array.isArray(item.image) && item.image.length > 0) {
+          const roomImageFile = item.image[0];
+          // 如果是新上传的文件，从 response 中提取 URL
+          if (roomImageFile.response) {
+            roomImage = resolveFileUrl(roomImageFile);
+          } 
+          // 如果是已有的图片（编辑时未重新上传），直接使用 url 字段
+          else if (roomImageFile.url) {
+            roomImage = roomImageFile.url.replace(BASE_URL, '');
+          }
+        }
         return {
           // 如果有 id 传回 id（更新），否则不传（新增）
           id: item.id, 
