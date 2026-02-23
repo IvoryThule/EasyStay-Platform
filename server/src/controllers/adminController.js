@@ -64,7 +64,7 @@ const getPendingHotels = async (req, res) => {
         {
           model: RoomType,
           as: 'roomTypes',
-          attributes: ['id', 'name', 'price', 'stock']
+          attributes: ['id', 'name', 'price', 'stock', 'image']
         }
       ],
       limit: Number(limit),
