@@ -91,7 +91,7 @@ const HotelAudit = () => {
   const getTagValue = (tags, prefix) => {
     if (!Array.isArray(tags)) return null;
     const found = tags.find(t => t.startsWith(prefix));
-    return found ? found.split(':')[1] : null;
+    return found ? found.substring(prefix.length) : null;
   };
 
   const columns = [
@@ -201,6 +201,35 @@ const HotelAudit = () => {
               <Descriptions.Item label="酒店主图" span={2}>
                 <Image src={renderImageUrl(selectedHotel.cover_image)} width={200} />
               </Descriptions.Item>
+              <Descriptions.Item label="其他图片" span={2}>
+                  <Space wrap size="small">
+                    {/* 优先展示 images 字段中的图片 */}
+                    {selectedHotel.images && Array.isArray(selectedHotel.images) && selectedHotel.images.length > 0 && 
+                      selectedHotel.images.map((img, index) => (
+                        <Image key={`img-${index}`} src={renderImageUrl(img)} width={100} height={100} style={{ objectFit: 'cover' }} />
+                      ))
+                    }
+                    {/* 兼容 tags 中的 IMAGES: */}
+                    {(() => {
+                        const imagesTagStr = Array.isArray(selectedHotel.tags) ? selectedHotel.tags.find(t => typeof t === 'string' && t.startsWith('IMAGES:')) : null;
+                        if (imagesTagStr) {
+                            try {
+                                const jsonStr = imagesTagStr.substring('IMAGES:'.length);
+                                const parsed = JSON.parse(jsonStr);
+                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                    return parsed.map((img, index) => (
+                                        <Image key={`tag-img-${index}`} src={renderImageUrl(img)} width={100} height={100} style={{ objectFit: 'cover' }} />
+                                    ));
+                                }
+                            } catch (e) {
+                                console.error('Parsed IMAGES tag error', e);
+                            }
+                        }
+                        return null;
+                    })()}
+                    {(!selectedHotel.images?.length && (!Array.isArray(selectedHotel.tags) || !selectedHotel.tags.find(t => typeof t === 'string' && t.startsWith('IMAGES:')))) && <Text type="secondary">暂无更多图片</Text>}
+                  </Space>
+              </Descriptions.Item>
               <Descriptions.Item label="中文名称">{selectedHotel.name}</Descriptions.Item>
               <Descriptions.Item label="英文名称">{getTagValue(selectedHotel.tags, 'EN:') || '未填写'}</Descriptions.Item>
               <Descriptions.Item label="开业时间">{getTagValue(selectedHotel.tags, 'OPENING:') || '未设置'}</Descriptions.Item>
@@ -212,9 +241,19 @@ const HotelAudit = () => {
             <Divider orientation="left"><HomeOutlined /> 房型信息 ({roomTypes.length})</Divider>
             <List
               dataSource={roomTypes}
+              itemLayout="horizontal"
               renderItem={(item) => (
                 <List.Item extra={<Text strong type="danger">￥{item.price}</Text>}>
                   <List.Item.Meta 
+                    avatar={
+                      <Image 
+                        src={renderImageUrl(item.image)} 
+                        width={100} 
+                        height={75} 
+                        style={{ objectFit: 'cover', borderRadius: '4px' }}
+                        fallback="https://placehold.co/100x75?text=No+Img"
+                      />
+                    }
                     title={item.name} 
                     description={`库存: ${item.stock} 间`} 
                   />
