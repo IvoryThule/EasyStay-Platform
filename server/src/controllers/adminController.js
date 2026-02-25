@@ -201,7 +201,7 @@ const getDashboard = async (req, res) => {
       const dayStart = new Date(`${dateStr} 00:00:00`);
       const dayEnd = new Date(new Date(dateStr).getTime() + 86400000);
 
-      const dayOrders = await Order.count({
+      const dayOrders = await Order.findAll({
         include: [includeHotel],
         where: {
           createdAt: {
@@ -209,6 +209,20 @@ const getDashboard = async (req, res) => {
             [Op.lt]: dayEnd
           }
         }
+      });
+      
+      const dayOrderCount = dayOrders.length;
+      
+      // Calculate room nights for daily trend (Paid orders only)
+      let dayNights = 0;
+      dayOrders.forEach(o => {
+          if (o.status === 1) { // Only count paid/booked orders
+              const start = new Date(o.check_in);
+              const end = new Date(o.check_out);
+              const diffTime = Math.abs(end - start);
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1; 
+              dayNights += diffDays;
+          }
       });
 
       const dayOrdersWithPrice = await Order.findAll({
@@ -231,18 +245,30 @@ const getDashboard = async (req, res) => {
 
       trend.push({
         date: `${date.getMonth() + 1}-${date.getDate()}`,
-        orders: dayOrders,
+        orders: dayOrderCount,
         revenue: Number(dayRevenue.toFixed(2)),
-        satisfaction: 85 + Math.floor(Math.random() * 10)
+        nights: dayNights
       });
     }
 
-    const channelDist = [
-      { name: 'Direct', value: Math.floor(totalOrders * 0.4) },
-      { name: 'Ctrip', value: Math.floor(totalOrders * 0.3) },
-      { name: 'Meituan', value: Math.floor(totalOrders * 0.2) },
-      { name: 'Fliggy', value: Math.floor(totalOrders * 0.1) }
-    ];
+    // 1. Calculate Hotel Distribution (Replacing Channel Distribution)
+    // Categories: Count of hotels by city
+    const hotelCityDist = await Hotel.findAll({
+      attributes: [
+        'city',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: hotelWhere,
+      group: ['city'],
+      order: [[sequelize.col('count'), 'DESC']],
+      limit: 10,
+      raw: true
+    });
+
+    const cityPieData = hotelCityDist.map(item => ({
+      name: item.city || '未知',
+      value: parseInt(item.count, 10)
+    }));
 
     const orderStatusDist = await Order.findAll({
       attributes: [
@@ -264,7 +290,7 @@ const getDashboard = async (req, res) => {
       },
       hotelStats,
       trend,
-      channelDist,
+      channelDist: cityPieData, // Reusing the field name for frontend compatibility but with new data
       orderStatusDist
     });
   } catch (error) {

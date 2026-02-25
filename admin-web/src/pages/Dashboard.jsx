@@ -135,21 +135,32 @@ const Dashboard = () => {
                 <ComposedChart data={trendDataFormatted} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                  
+                  {/* 左侧 Y 轴：营收额 */}
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} label={{ value: '营收 (RMB)', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8' } }} />
+                  
+                  {/* 右侧 Y 轴：预订量 & 间夜量 */}
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} label={{ value: '数量', angle: 90, position: 'insideRight', style: { fill: '#94a3b8' } }} />
+                  
                   <Tooltip contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                   <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
-                  <Bar dataKey="orders" name="预订量" fill={THEME.primary} radius={[4, 4, 0, 0]} barSize={24} />
-                  <Area type="monotone" dataKey="revenue" name="营收额" fill="#e0f2fe" stroke={THEME.primary} strokeWidth={2} fillOpacity={0.6} />
-                  <Line type="monotone" dataKey="satisfaction" name="满意度" stroke={THEME.success} strokeWidth={2} dot={{ r: 4, fill: '#fff', strokeWidth: 2 }} />
+                  
+                  {/* 预订量 - 右轴 */}
+                  <Bar yAxisId="right" dataKey="orders" name="预订量" fill={THEME.primary} radius={[4, 4, 0, 0]} barSize={24} />
+                  
+                  {/* 营收额 - 左轴 */}
+                  <Area yAxisId="left" type="monotone" dataKey="revenue" name="营收额" fill="#e0f2fe" stroke={THEME.primary} strokeWidth={2} fillOpacity={0.6} />
+                  
+                  {/* 间夜量 - 右轴 (替代原来的满意度) */}
+                  <Line yAxisId="right" type="monotone" dataKey="nights" name="间夜量" stroke={THEME.success} strokeWidth={2} dot={{ r: 4, fill: '#fff', strokeWidth: 2 }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
           </Card>
           
-          {/* 利用后端真实的渠道分布数据
-              如果 trend 不满足要求，可以切换到这里查看其他维度 */}
+          {/* 城市酒店分布 (替换原订单状态分布) */}
           {channelDataFormatted && channelDataFormatted.length > 0 && (
-            <Card title="渠道分布" variant="borderless" style={{ borderRadius: 12, marginTop: 24 }}>
+            <Card title="各城市酒店数量分布" variant="borderless" style={{ borderRadius: 12, marginTop: 24 }}>
               <div style={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
                   <PieChart>
@@ -157,11 +168,13 @@ const Dashboard = () => {
                       data={channelDataFormatted}
                       dataKey="value"
                       nameKey="name"
+                      cx="50%"
+                      cy="50%"
                       outerRadius={100}
-                      label
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     >
-                      {channelDataFormatted.map((_, index) => (
-                        <Cell key={`channel-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      {channelDataFormatted.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />

@@ -183,11 +183,15 @@ const RevenueStats = () => {
                 <LineChart data={trendData}>
                   <CartesianGrid strokeDasharray='3 3' />
                   <XAxis dataKey='date' />
-                  <YAxis />
+                  {/* Left Axis: Revenue */}
+                  <YAxis yAxisId="left" label={{ value: 'Revenue', angle: -90, position: 'insideLeft' }} />
+                  {/* Right Axis: Orders & Nights */}
+                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Count', angle: 90, position: 'insideRight' }} />
                   <Tooltip />
                   <Legend />
-                  <Line type='monotone' dataKey='revenue' name='Revenue' stroke='#1677ff' strokeWidth={2} />
-                  <Line type='monotone' dataKey='orders' name='Orders' stroke='#13c2c2' strokeWidth={2} />
+                  <Line yAxisId="left" type='monotone' dataKey='revenue' name='Revenue' stroke='#1677ff' strokeWidth={2} />
+                  <Line yAxisId="right" type='monotone' dataKey='orders' name='Orders' stroke='#13c2c2' strokeWidth={2} />
+                  <Line yAxisId="right" type='monotone' dataKey='nights' name='Room Nights' stroke='#52c41a' strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -195,13 +199,13 @@ const RevenueStats = () => {
         </Col>
 
         <Col xs={24} xl={10}>
-          <Card title='Channel Distribution'>
+          <Card title='Hotel City Distribution'>
             <div style={{ width: '100%', height: 320 }}>
               <ResponsiveContainer>
                 <PieChart>
                   <Pie data={channelData} dataKey='value' nameKey='name' outerRadius={100} label>
-                    {channelData.map((_, index) => (
-                      <Cell key={`channel-${index}`} fill={COLORS[index % COLORS.length]} />
+                    {channelData.map((entry, index) => (
+                       <Cell key={`status-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />
