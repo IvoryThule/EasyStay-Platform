@@ -65,7 +65,15 @@ const Dashboard = () => {
   };
 
   // 格式化趋势数据 - 使用后端真实数据
-  const trendDataFormatted = trend || [];
+  // 后端返回的数据结构中使用的日期字段叫 `date`，而 demo 代码里
+  // 图表的 X 轴默认使用 `name` 字段，因此导致看起来是空数据。
+  // 这里在前端做一层简单的转换，或者直接在 XAxis 中使用 `date`。
+  // 同时保留原始字段以防其他组件复用。
+  const trendDataFormatted = (trend || []).map(item => ({
+    ...item,
+    // 兼容旧版图表设置
+    name: item.date || item.name,
+  }));
 
   // 格式化渠道分布数据 - 使用后端真实数据
   const channelDataFormatted = channelDist || [];
@@ -137,6 +145,32 @@ const Dashboard = () => {
               </ResponsiveContainer>
             </div>
           </Card>
+          
+          {/* 利用后端真实的渠道分布数据
+              如果 trend 不满足要求，可以切换到这里查看其他维度 */}
+          {channelDataFormatted && channelDataFormatted.length > 0 && (
+            <Card title="渠道分布" variant="borderless" style={{ borderRadius: 12, marginTop: 24 }}>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={channelDataFormatted}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={100}
+                      label
+                    >
+                      {channelDataFormatted.map((_, index) => (
+                        <Cell key={`channel-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
         </Col>
 
         {/* 右侧:酒店状态分布 */}
