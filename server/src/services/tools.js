@@ -2,6 +2,12 @@ const { DynamicStructuredTool } = require("@langchain/core/tools");
 const { z } = require("zod");
 const { Hotel } = require('../models');
 const { Op, Sequelize } = require('sequelize');
+const { 
+  getLocationByAddress, 
+  searchPOI, 
+  getWeather, 
+  getRoute 
+} = require('./amapService');
 
 const hotelSearchTool = new DynamicStructuredTool({
   name: "search_hotels",
@@ -74,4 +80,206 @@ const hotelSearchTool = new DynamicStructuredTool({
   },
 });
 
-module.exports = { hotelSearchTool };
+// ---- 真实工具: 路线规划 (routeplanner) - 基于高德路径规划 ----
+const routePlannerTool = new DynamicStructuredTool({
+  name: "routeplanner",
+  description: "用于规划路线，计算从出发地到目的地的最佳交通方式，调用真实地图API。",
+  schema: z.object({
+    from: z.string().describe("出发地名称，越详细越好"),
+    to: z.string().describe("目的地名称，越详细越好"),
+    mode: z.enum(["driving", "walking", "transit", "bicycling"]).optional().describe("出行方式，默认为 transit (公交/地铁)")
+  }),
+  func: async ({ from, to, mode = "transit" }) => {
+    console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}]`);
+    
+    // 1. 获取起终点坐标
+    const originGeo = await getLocationByAddress(from);
+    const destGeo = await getLocationByAddress(to);
+    
+    if (!originGeo || !destGeo) {
+        return `无法找到"${from}"或"${to}"的具体位置，请提供更详细的地址。`;
+    }
+
+    // 2. 这里的 city 必填 (针对公交)，我们取 origin 的 citycode
+    const city = originGeo.citycode || "010"; // 默认北京，如果不幸获取失败
+    const strategy = mode === 'driving' ? 10 : 0;
+
+    const routeData = await getRoute(originGeo.rawLocation, destGeo.rawLocation, mode, city, strategy); // This function returns route object directly (route.paths or route.transits)
+
+    if (!routeData) return "路线规划服务异常。";
+
+    // 针对公交模式的特殊解析 (Result structure: route.transits)
+    if (mode === 'transit') {
+         // getRoute() returns response.data.route directly
+         const transits = routeData.transits;
+         if (!transits || transits.length === 0) return "未找到公交路线，可能是距离过近或跨城方案不支持。";
+         
+         // 解析第一条公交路线
+         const path = transits[0];
+         const segments = path.segments || [];
+         const stepsDesc = segments.map(seg => {
+             if (seg.bus && seg.bus.buslines && seg.bus.buslines.length > 0) {
+                 return `乘坐 ${seg.bus.buslines[0].name} (${seg.bus.buslines[0].departure_stop.name} 上, ${seg.bus.buslines[0].arrival_stop.name} 下)`;
+             } else if (seg.walking) {
+                 return `步行 ${seg.walking.distance}米`;
+             }
+             return "换乘/步行";
+         }).join(" -> ");
+         
+         return JSON.stringify({
+             mode,
+             origin: from,
+             destination: to,
+             distance: `${(path.distance/1000).toFixed(1)}km`,
+             duration: `${Math.ceil(path.duration/60)}分钟`,
+             cost: path.cost ? `¥${path.cost}` : "未知",
+             route: stepsDesc
+         });
+    }
+
+    // 针对驾车/步行/骑行模式 (Result structure: route.paths)
+    const paths = routeData.paths;
+    if (!paths || paths.length === 0) return "未找到路线。";
+    
+    const primePath = paths[0];
+    return JSON.stringify({
+        mode,
+        origin: from,
+        destination: to,
+        distance: `${(primePath.distance/1000).toFixed(1)}km`,
+        duration: `${Math.ceil(primePath.duration/60)}分钟`,
+        strategy: primePath.strategy,
+        steps: primePath.steps.map(s => s.instruction).slice(0, 5).join("; ") + "..." // 简化步骤
+    });
+  }
+});
+
+// ---- 真实工具: 景点查找 (attractionfinder) - 基于高德搜索 ----
+const attractionFinderTool = new DynamicStructuredTool({
+  name: "attractionfinder",
+  description: "用于查找附近的旅游景点或特定类型的Poi。",
+  schema: z.object({
+    city: z.string().describe("城市名称"),
+    keyword: z.string().optional().describe("景点关键词，若无则默认为“景点”")
+  }),
+  func: async ({ city, keyword = "景点" }) => {
+    console.log(`🛠️ Agent 调用高德POI搜索(景点): ${city} [${keyword}]`);
+    
+    const pois = await searchPOI(keyword, city, "风景名胜");
+    
+    if (!pois || pois.length === 0) {
+        return `在${city}未找到与“${keyword}”相关的景点。`;
+    }
+
+    return JSON.stringify(pois.map(poi => ({
+        name: poi.name,
+        type: poi.type,
+        address: poi.address,
+        rating: poi.rating,
+        distance: poi.distance
+    })));
+  }
+});
+
+// ---- 真实工具: 餐厅查找 (restaurantfinder) - 基于高德搜索 ----
+const restaurantFinderTool = new DynamicStructuredTool({
+  name: "restaurantfinder",
+  description: "用于查找附近的餐厅、美食。",
+  schema: z.object({
+    location: z.string().describe("地点或城市名"),
+    cuisine: z.string().optional().describe("美食关键词，如“火锅”、“川菜”")
+  }),
+  func: async ({ location, cuisine = "美食" }) => {
+    console.log(`🛠️ Agent 调用高德POI搜索(餐饮): ${location} [${cuisine}]`);
+
+    const pois = await searchPOI(cuisine, location, "餐饮服务");
+    
+    if (!pois || pois.length === 0) {
+        return `在${location}附近未找到“${cuisine}”。`;
+    }
+
+    return JSON.stringify(pois.map(poi => ({
+        name: poi.name,
+        type: poi.type,
+        address: poi.address,
+        rating: poi.rating,
+        price: poi.cost !== "未知" ? `¥${poi.cost}` : "未知",
+        tel: poi.tel
+    })));
+  }
+});
+
+// ---- 真实工具: 天气预报 (weatherreport) - 基于高德天气 ----
+const weatherReportTool = new DynamicStructuredTool({
+  name: "weatherreport",
+  description: "用于查询实时天气或天气预报。高德天气仅支持国内城市。",
+  schema: z.object({
+    city: z.string().describe("城市名称")
+  }),
+  func: async ({ city }) => {
+    console.log(`🛠️ Agent 调用高德天气: ${city}`);
+    
+    // 1. 获取 adcode
+    const geo = await getLocationByAddress(city);
+    if (!geo || !geo.adcode) return `无法获取地址"${city}"的行政编码。`;
+
+    // 2. 调用 weatherAPI
+    const forecast = await getWeather(geo.adcode);
+
+    if (!forecast || !forecast.casts || forecast.casts.length === 0) {
+        return `未查询到${city}的天气信息。`;
+    }
+
+    const casts = forecast.casts || [];
+    
+    // 整理未来3天天气
+    const report = casts.map(c => ({
+        date: c.date,
+        dayWeather: c.dayweather,
+        nightWeather: c.nightweather,
+        temp: `${c.nighttemp}°C ~ ${c.daytemp}°C`,
+        wind: `${c.daywind}风 ${c.daypower}级`
+    }));
+
+    return JSON.stringify({
+        city: forecast.city,
+        reportTime: forecast.reporttime,
+        forecasts: report
+    });
+  }
+});
+
+// ---- (保留模拟) 工具: 汇率与时区 (高德不支持) ----
+const currencyConverterTool = new DynamicStructuredTool({
+  name: "currencyconverter",
+  description: "用于货币转换 (模拟工具，非实时汇率)。",
+  schema: z.object({
+    amount: z.number(),
+    from: z.string(),
+    to: z.string()
+  }),
+  func: async ({ amount, from, to }) => {
+     // 简单模拟
+     const rate = (from === 'USD' && to === 'CNY') ? 7.14 : (from === 'CNY' && to === 'USD' ? 0.14 : 1.0);
+     return JSON.stringify({ original: amount, converted: (amount * rate).toFixed(2), rate });
+  }
+});
+
+const timezoneConverterTool = new DynamicStructuredTool({
+  name: "timezoneconverter",
+  description: "用于时区查询 (模拟工具)。",
+  schema: z.object({ city: z.string() }),
+  func: async ({ city }) => {
+     return JSON.stringify({ city, timeSuggestion: "当前功能为模拟，建议直接查询当地时间。" });
+  }
+});
+
+module.exports = { 
+  hotelSearchTool,
+  routePlannerTool,
+  attractionFinderTool,
+  restaurantFinderTool,
+  weatherReportTool,
+  currencyConverterTool,
+  timezoneConverterTool
+};

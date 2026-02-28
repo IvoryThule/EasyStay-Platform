@@ -86,7 +86,11 @@ const getNearbyPOI = async (longitude, latitude, types = '旅游景点|地铁站
  * 文档: https://lbs.amap.com/api/webservice/guide/api/georegeo
  */
 const getLocationByAddress = async (address, city = '') => {
-    if (!AMAP_KEY || !address) {
+    // 允许通过 address 传参，若无 key 则直接返回 null
+    if (!AMAP_KEY) {
+        return null; // Don't throw if no key, just return null as existing pattern
+    }
+    if (!address) {
         return null;
     }
 
@@ -96,13 +100,20 @@ const getLocationByAddress = async (address, city = '') => {
         const url = `https://restapi.amap.com/v3/geocode/geo?key=${AMAP_KEY}&address=${encodedAddress}&city=${encodedCity}`;
         const response = await axios.get(url);
 
-        if (response.data.status === '1' && Array.isArray(response.data.geocodes) && response.data.geocodes[0]) {
-            const location = response.data.geocodes[0].location || '';
+        if (response.data.status === '1' && Array.isArray(response.data.geocodes) && response.data.geocodes.length > 0) {
+            const geocode = response.data.geocodes[0];
+            const location = geocode.location || '';
             const [longitude, latitude] = location.split(',');
-            if (!longitude || !latitude) return null;
+            
+            // 返回更多详细信息给工具
             return {
                 longitude: Number(longitude),
-                latitude: Number(latitude)
+                latitude: Number(latitude),
+                rawLocation: location,
+                adcode: geocode.adcode,
+                citycode: geocode.citycode,
+                province: geocode.province,
+                city: geocode.city
             };
         }
         return null;
@@ -112,8 +123,106 @@ const getLocationByAddress = async (address, city = '') => {
     }
 };
 
+/**
+ * 关键字搜索 POI (attractionfinder / restaurantfinder)
+ * 文档: https://lbs.amap.com/api/webservice/guide/api/newpoisearch
+ */
+const searchPOI = async (keywords, city, types, offset = 10) => {
+    if (!AMAP_KEY) return [];
+
+    try {
+        const params = {
+            key: AMAP_KEY,
+            keywords: keywords,
+            city: city,
+            types: types,
+            city_limit: !!city ? true : false,
+            offset: offset,
+            extensions: 'all'
+        };
+        
+        const response = await axios.get('https://restapi.amap.com/v3/place/text', { params });
+        
+        if (response.data.status === '1' && response.data.pois && response.data.pois.length > 0) {
+            return response.data.pois;
+        }
+        return [];
+    } catch (error) {
+        console.error('Amap POI Search Error:', error.message);
+        return [];
+    }
+};
+
+/**
+ * 获取天气信息 (weatherreport)
+ * 文档: https://lbs.amap.com/api/webservice/guide/api/weatherinfo
+ */
+const getWeather = async (adcode, extensions = 'all') => {
+    if (!AMAP_KEY) return null;
+
+    try {
+        const response = await axios.get('https://restapi.amap.com/v3/weather/weatherInfo', {
+            params: {
+                key: AMAP_KEY,
+                city: adcode,
+                extensions: extensions
+            }
+        });
+
+        if (response.data.status === '1' && response.data.forecasts && response.data.forecasts.length > 0) {
+            return response.data.forecasts[0];
+        }
+        return null;
+    } catch (error) {
+        console.error('Amap Weather Error:', error.message);
+        return null;
+    }
+};
+
+/**
+ * 路线规划 (routeplanner)
+ * 文档: https://lbs.amap.com/api/webservice/guide/api/direction
+ */
+const getRoute = async (origin, destination, mode = 'transit', city = '010', strategy = 0) => {
+    if (!AMAP_KEY) return null;
+
+    let apiPath = "";
+    const params = {
+        key: AMAP_KEY,
+        origin: origin, // "lon,lat"
+        destination: destination, // "lon,lat"
+    };
+
+    if (mode === 'transit') {
+        apiPath = "/direction/transit/integrated";
+        params.city = city;
+        params.strategy = strategy; 
+    } else if (mode === 'walking') {
+        apiPath = "/direction/walking";
+    } else if (mode === 'driving') {
+        apiPath = "/direction/driving";
+        params.strategy = 10; // 躲避拥堵
+    } else if (mode === 'bicycling') {
+        apiPath = "/direction/bicycling";
+    }
+
+    try {
+        const response = await axios.get(`https://restapi.amap.com/v3${apiPath}`, { params });
+        if (response.data.status === '1' && response.data.route) {
+            return response.data.route;
+        }
+        return null;
+    } catch (error) {
+        console.error(`Amap Route Error [${mode}]:`, error.message);
+        return null;
+    }
+};
+
 module.exports = {
     getLocationByIP,
     getNearbyPOI,
-    getLocationByAddress
+    getLocationByAddress,
+    searchPOI,
+    getWeather,
+    getRoute
 };
