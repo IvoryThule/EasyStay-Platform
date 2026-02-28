@@ -33,7 +33,7 @@
 | **Data Layer** | **MySQL 8.0 + Sequelize** | ORM 映射, 自动化迁移, 事务管理 |
 | **Admin Web** | **React 18 + Vite** | Ant Design Pro 风格, 响应式布局, 动态表单 |
 | **Mobile App** | **Taro + NutUI** | 多端编译 (H5/小程序), 沉浸式体验 |
-| **AI Ability** | **GLM-4 (智谱 AI)** | 智能行程规划, 酒店文案生成, 情感分析 |
+| **AI Ability** | **GLM-4 (智谱 AI) + LangChain** | 双层意图引擎, ReAct 工具调用, 智能降级推荐 |
 | **LBS Service**| **Amap (高德地图)** | IP 精准定位, 周边搜索, 距离计算 |
 | **DevOps** | **Docker + Nginx** | 容器化编排, 反向代理, 自动化部署脚本 |
 
@@ -41,9 +41,11 @@
 
 ## 🌟 核心功能 (Key Features)
 
-### 🤖 AI 赋能
-*   **智能客服**：基于 GLM-4 的 AI 助手，支持自然语言查询酒店推荐（如：“帮我找外滩附近适合亲子的五星级酒店”）。
-*   **文案润色**：商户端集成 AI 写作，一键生成高质量酒店介绍文案。
+### 🤖 AI 赋能 (LangChain ReAct Agent)
+*   **企业级 Agent 架构**：抛弃传统硬编码提示词，基于 **LangChain** 构建完整的 **ReAct (Reasoning and Acting)** 智能体流，具备动态的多步思考与函数调用（Tool Calling）能力。
+*   **双层意图路由引擎**：内置高速轻量级意图分析器 (Intent Router)，精准剥离“查询业务”、“闲聊”与“查订单”行为，按需动态绑定工具，彻底消除非业务意图下的幻觉，大幅降低 Token 消耗。
+*   **沉浸式“思维过程”推演展示**：C 端移动端不仅提供常规结果，同时配有媲美主流大语言模型的 Accordion 折叠面板，直观展现 Agent 执行 `search_hotels` 等底层插件的心智推演流程与真实日志。
+*   **智能语义降级与边界防御**：内置参数化的防 SQL 注入保障（Sequelize.cast 安全绑定），并在大模型生成阶段强加输出规范（防字数爆炸、自动补全缺失常识，如“交通便利”隐式映射至“地铁”标签）。
 
 ### 🛎️ 核心业务
 *   **酒店管理**：完整的 CRUD 流程，支持图片上传 (Multer)、富文本编辑、房型库存管理。
@@ -172,8 +174,9 @@ EasyStay-Platform/
 │   │   │   ├── hotelController.js  # [代码] 酒店筛选、录入、审核逻辑
 │   │   │   ├── orderController.js  # [代码] 下单逻辑
 │   │   │   └── aiController.js     # [代码] 构造 Prompt 调用 Service
-│   │   ├── services/               # [外部服务]
-│   │   │   ├── GLMService.js       # [封装] 调用 GLM API (System Prompts)
+│   │   ├── services/               # [外部服务 & AI 引擎]
+│   │   │   ├── agentService.js     # [核心] 基于 LangChain 的 ReAct Agent 引擎
+│   │   │   ├── tools.js            # [核心] Agent 挂载的工具集 (如 search_hotels)
 │   │   │   └── amapService.js      # [封装] 调用高德 Web 服务 API
 │   │   └── utils/
 │   │       ├── response.js         # [工具] 统一返回格式 {code, msg, data}
@@ -229,6 +232,9 @@ EasyStay-Platform/
     │       ├── index/              # [页面] 首页
     │       │   ├── index.jsx
     │       │   ├── index.config.js # [配置] 页面标题等
+    │       │   └── index.scss
+    │       ├── ai-chat/            # [页面] AI 智能助理对话页 (含沉浸式推演动画)
+    │       │   ├── index.jsx
     │       │   └── index.scss
     │       ├── list/               # [页面] 列表页
     │       │   ├── index.jsx

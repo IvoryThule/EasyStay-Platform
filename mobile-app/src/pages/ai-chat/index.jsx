@@ -39,6 +39,7 @@ function buildAssistantMessage(payload) {
   const type = messagePayload.type || 'text'
   const text = messagePayload.text || payload?.content || payload?.reply || '抱歉，暂时无法回答。'
   const structured = Array.isArray(messagePayload.structured) ? messagePayload.structured : []
+  const thoughtProcess = Array.isArray(payload?.thoughtProcess) ? payload.thoughtProcess : []
   const cards = Array.isArray(messagePayload.cards)
     ? messagePayload.cards.map(card => ({
       ...card,
@@ -52,8 +53,10 @@ function buildAssistantMessage(payload) {
     type,
     text,
     structured,
+    thoughtProcess,
     cards,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    isTyping: true  // 新增打字机标记
   }
 }
 
@@ -72,8 +75,10 @@ export default function AiChatPage() {
       type: 'text',
       text: '您好，我是 EasyStay 智能助手。告诉我城市、预算和偏好，我会基于真实酒店数据推荐；也可以继续问“这个酒店附近有什么景点/美食/地铁”。',
       structured: [],
+      thoughtProcess: [],
       cards: [],
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      isTyping: false
     }
   ])
   const [sessionContext, setSessionContext] = useState({
@@ -86,7 +91,11 @@ export default function AiChatPage() {
   })
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingText, setLoadingText] = useState('✨ 深度思考中...')
   const [scrollIntoView, setScrollIntoView] = useState('')
+  const [expandedThoughts, setExpandedThoughts] = useState({}) // 用于记录折叠状态
+
+  const toggleThought = (id) => setExpandedThoughts(p => ({...p, [id]: !p[id]}))
 
   const appendMessage = (msg) => {
     setMessages(prev => [...prev, msg])
@@ -116,6 +125,16 @@ export default function AiChatPage() {
     setInputValue('')
     setLoading(true)
 
+    // 模拟一种更真实的思考和查询调度动画阶段
+    let stepCount = 0;
+    const loadingStates = ['✨ 深度思考中...', '✨ 深度思考中...', '🛠️ 正在调度工具查找数据...', '🛠️ 正在调度工具查找数据...', '📝 整理推荐中...'];
+    const fakeTimer = setInterval(() => {
+       stepCount++;
+       if(loadingStates[stepCount]) {
+           setLoadingText(loadingStates[stepCount]);
+       }
+    }, 1500);
+
     try {
       const res = await request({
         url: '/ai/chat',
@@ -144,11 +163,15 @@ export default function AiChatPage() {
         type: 'text',
         text: '服务暂时不可用，请稍后重试。',
         structured: [],
+        thoughtProcess: [],
         cards: [],
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        isTyping: false
       })
     } finally {
+      clearInterval(fakeTimer)
       setLoading(false)
+      setLoadingText('✨ 深度思考中...')
     }
   }
 
@@ -167,7 +190,25 @@ export default function AiChatPage() {
       >
         {messages.map(msg => (
           <View key={msg.id} id={msg.id} className={`msg-row ${msg.role}`}>
-            <View className="bubble">{msg.text}</View>
+            
+            {msg.thoughtProcess && msg.thoughtProcess.length > 0 && (
+              <View className="thought-process">
+                <View className="thought-header" onClick={() => toggleThought(msg.id)}>
+                  <Text className="thought-title">🛠️ 深度思考与调度过程</Text>
+                  <Text className="thought-arrow">{expandedThoughts[msg.id] ? '▲ 收起' : '▼ 展开'}</Text>
+                </View>
+                {expandedThoughts[msg.id] && msg.thoughtProcess.map((step, idx) => (
+                  <View key={idx} className="thought-step">
+                    <Text className="thought-tool">调用工具：{step.tool}</Text>
+                    <Text className="thought-args">参数：{JSON.stringify(step.toolInput)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View className="bubble">
+              <Text style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Text>
+            </View>
 
             {msg.structured && msg.structured.length > 0 && (
               <View className="structured-list">
@@ -205,7 +246,9 @@ export default function AiChatPage() {
 
         {loading && (
           <View className="msg-row assistant">
-            <View className="bubble">正在为您查询中...</View>
+            <View className="bubble loading-bubble">
+              <Text className="loading-text">{loadingText}</Text>
+            </View>
           </View>
         )}
       </ScrollView>
