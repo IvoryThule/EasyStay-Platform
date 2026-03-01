@@ -115,9 +115,11 @@ const routePlannerTool = new DynamicStructuredTool({
   func: async ({ from, to, mode = "transit" }) => {
     console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}]`);
     
-    // 1. 获取起终点坐标
-    const originGeo = await getLocationByAddress(from);
-    const destGeo = await getLocationByAddress(to);
+    // 1. 获取起终点坐标 (Parallel execution)
+    const [originGeo, destGeo] = await Promise.all([
+        getLocationByAddress(from),
+        getLocationByAddress(to)
+    ]);
     
     if (!originGeo || !destGeo) {
         return `无法找到"${from}"或"${to}"的具体位置，请提供更详细的地址。`;

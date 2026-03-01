@@ -41,6 +41,8 @@ app.get('/', (req, res) => {
 // 测试数据库连接 (可选，暂时先不连，保证先跑起来)
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
+// Extend timeout for long-running LLM tasks especially for GLM
+server.setTimeout(300000); // 5 minutes (300000 ms)

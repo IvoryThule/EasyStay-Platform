@@ -97,54 +97,8 @@ class AgentService {
     const intermediateSteps = [];
 
     try {
-        // 第一步：初级意图识别 (独立轻量级调用，满足用户的纯粹意图分析需求)
-        console.log("🧠 正在进行初级意图识别...");
-        const intentPrompt = ChatPromptTemplate.fromMessages([
-            ["system", `你是一个专业的旅行管家意图分析引擎。当前用户输入了一句话，请你仅根据这句话分析用户的真实意图。
-请返回严格的 JSON 格式，包含两个字段：
-1. "intent": 必须是以下之一: 
-   - "hotel_search" (找酒店/订房/查房价)
-   - "route_query" (查路线/交通)
-   - "attraction_query" (查景点/玩乐)
-   - "dine_query" (查餐厅/美食)
-   - "utility_query" (查天气/汇率/时差等小工具)
-   - "chitchat" (闲聊/打招呼/问候)
-   - "order_query" (查订单)
-   - "other" (其他)
-2. "explanation": 分析理由（限20字以内）
-不要输出任何 markdown 标记，直接输出 JSON 文本。`],
-            ["human", "{input}"]
-        ]);
-        const intentResponse = await this.model.invoke(await intentPrompt.formatMessages({ input: message }));
-        
-        let recognizedIntent = "other";
-        try {
-            const parsedIntent = JSON.parse(intentResponse.content.trim().replace(/^```json|```$/g, ''));
-            recognizedIntent = parsedIntent.intent;
-            // 将意图识别的过程也展示给前端
-            intermediateSteps.push({
-                action: { tool: "intent_analyzer", toolInput: { text: message }, log: "正在分析用户的真实意图" },
-                observation: `识别结果: ${parsedIntent.intent} \\n分析理由: ${parsedIntent.explanation}`
-            });
-            console.log(`🧠 意图分析完成: ${parsedIntent.intent} - ${parsedIntent.explanation}`);
-        } catch (e) {
-            console.warn("⚠️ 意图识别解析失败降级:", intentResponse.content);
-        }
-
-        // 第二步：根据意图决定是否需要绑定工具（优化 Token 和性能）
-        let activeModel = this.modelWithTools;
-        
-        // 只有纯粹闲聊或订单查询时，才禁用工具箱，避免胡乱调用
-        if (recognizedIntent === "chitchat") {
-            activeModel = this.model; 
-            console.log(`⚡ 意图为 ${recognizedIntent}，直接使用基础模型作答，跳过工具绑定。`);
-        } else if (recognizedIntent === "order_query") {
-            // 订单查询意图的特殊拦截
-            return {
-                output: "很抱歉，我目前还没有接入订单查询系统，无法帮您查看历史订单，您可以前往 App 的【我的订单】页面查看。",
-                intermediateSteps
-            };
-        }
+        // 直接使用绑定了工具的模型
+        const activeModel = this.modelWithTools;
 
         const messages = await this.prompt.formatMessages({
             input: message,
@@ -156,8 +110,11 @@ class AgentService {
         const MAX_ITERATIONS = 3;
 
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-            // Invoke the model with the current conversation history + intermediate steps
-            const response = await activeModel.invoke(currentMessages);
+            // Invoke the model with the current conversation history + intermediate steps + Timeout
+            const response = await Promise.race([
+                activeModel.invoke(currentMessages),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('LLM Response Timeout (30s)')), 30000))
+            ]);
             currentMessages.push(response);
 
             // If no tool calls, it means the model has finished its thought process
