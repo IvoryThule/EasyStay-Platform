@@ -158,6 +158,29 @@ const RevenueStats = () => {
         </Col>
       </Row>
 
+      {/* Business Metrics Row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic 
+              title="Occupancy Rate" 
+              value={dashboardData?.overview?.occupancyRate || '0%'} 
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic 
+              title="ADR (Avg Daily Rate)" 
+              prefix="¥" 
+              value={dashboardData?.overview?.adr || '0.00'} 
+              precision={2} 
+            />
+          </Card>
+        </Col>
+      </Row>
+
       {platformStats ? (
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} lg={6}>

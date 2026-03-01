@@ -251,7 +251,7 @@ const HotelEdit = () => {
             {/* 新增: 标签输入 */}
             <Row gutter={24}>
               <Col span={24}>
-                <Form.Item name="business_tags" label="业务标签 (可留空，AI将自动补充)">
+                <Form.Item name="business_tags" label="业务标签">
                   <Select 
                     mode="tags"
                     placeholder="输入标签后回车，例如：亲子优选、免费停车、近地铁" 

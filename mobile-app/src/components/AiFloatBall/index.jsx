@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text } from '@tarojs/components';
+import { View } from '@tarojs/components';
+import { FaRobot } from 'react-icons/fa';
 import Taro from '@tarojs/taro';
 import './index.scss';
 
@@ -10,7 +11,7 @@ export default function AiFloatBall() {
 
   return (
     <View className="ai-float-ball" onClick={handleOpenChat}>
-      <Text className="ai-float-ball__icon">🤖</Text>
+      <FaRobot size={24} color="#fff" />
     </View>
   );
 }

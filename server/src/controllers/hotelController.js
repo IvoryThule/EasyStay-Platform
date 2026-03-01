@@ -1,5 +1,5 @@
 ﻿﻿// [逻辑] 酒店筛选、录入、审核逻辑
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const { Hotel, RoomType, User } = require('../models');
 const { success, fail } = require('../utils/response');
 
@@ -148,7 +148,9 @@ const list = async (req, res) => {
     }
 
     // 2. 业务筛选
-    if (city) where.city = city;
+    const normalizedCity = typeof city === 'string' ? city.trim().replace(/市$/, '') : city;
+    const noLimitCities = new Set(['不限城市', '不限城', '不限', '全国']);
+    if (normalizedCity && !noLimitCities.has(normalizedCity)) where.city = normalizedCity;
     if (star) where.star = star;
     
     // 价格区间
@@ -158,12 +160,33 @@ const list = async (req, res) => {
       if (max_price) where.price[Op.lte] = max_price;
     }
 
-    // 关键词搜索 (name 或 address)
+    // 关键词搜索 (name, address, tags, roomTypes)
     if (keyword) {
-      where[Op.or] = [
-        { name: { [Op.like]: `%${keyword}%` } },
-        { address: { [Op.like]: `%${keyword}%` } }
+      const keywordLike = `%${keyword}%`;
+      // Find hotels that match room types
+      const matchingRoomTypes = await RoomType.findAll({
+        attributes: ['hotel_id'],
+        where: {
+          [Op.or]: [
+            { name: { [Op.like]: keywordLike } }
+          ]
+        },
+        raw: true
+      });
+      
+      const roomTypeHotelIds = matchingRoomTypes.map(rt => rt.hotel_id);
+
+      const keywordOr = [
+        { name: { [Op.like]: keywordLike } },
+        { address: { [Op.like]: keywordLike } },
+        Sequelize.where(Sequelize.cast(Sequelize.col('tags'), 'CHAR'), 'LIKE', keywordLike)
       ];
+
+      if (roomTypeHotelIds.length > 0) {
+        keywordOr.push({ id: { [Op.in]: roomTypeHotelIds } });
+      }
+
+      where[Op.or] = keywordOr;
     }
 
     // 3. 排序

@@ -1,6 +1,6 @@
 const { DynamicStructuredTool } = require("@langchain/core/tools");
 const { z } = require("zod");
-const { Hotel } = require('../models');
+const { Hotel, RoomType } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 const { 
   getLocationByAddress, 
@@ -11,12 +11,12 @@ const {
 
 const hotelSearchTool = new DynamicStructuredTool({
   name: "search_hotels",
-  description: "当用户想要搜索酒店、查询房价、寻找住宿推荐时使用。不要用于查询纯粹的旅游景点或路线。",
+  description: "当用户想要搜索酒店、查询房价、寻找住宿推荐时使用。如果用户没有指定城市，则表示在所有城市范围内搜索。不要用于查询纯粹的旅游景点或路线。",
   schema: z.object({
-    city: z.string().describe("城市名称，如：上海、北京"),
+    city: z.string().optional().describe("城市名称。如果不提供，则在全平台搜索。"),
     minPrice: z.number().optional().describe("最低预算"),
     maxPrice: z.number().optional().describe("最高预算"),
-    keyword: z.string().optional().describe("具体环境或地标标签。若用户用宽泛词(如“交通便利”)，请自动转化为更具体的实体词汇(如“地铁”、“车站”、“商圈”)以扩大命中率。"),
+    keyword: z.string().optional().describe("具体环境或地标标签。若用户用宽泛词(如“交通便利”)，请自动转化为更具体的实体词汇(如“地铁”、“车站”、“商圈”)以扩大命中率。如果关键词或者关键词的属性（比如说双床房属于房型这个表中）是某个数据库实体的话，请优先匹配实体名称或地址字段，而非模糊匹配标签。"),
     sortBy: z.enum(["price_asc", "price_desc", "score_desc"]).optional().describe("排序方式：价格从低到高(price_asc)，价格从高到低(price_desc)，评分从高到低(score_desc)")
   }),
   func: async ({ city, minPrice, maxPrice, keyword, sortBy }) => {
@@ -34,7 +34,11 @@ const hotelSearchTool = new DynamicStructuredTool({
           status: 1 // 仅查询上架状态的酒店
       };
       
-      if (city) where.city = { [Op.like]: `%${city}%` };
+        const normalizedCity = typeof city === 'string' ? city.trim().replace(/市$/, '') : city;
+        const noLimitCities = new Set(['不限城市', '不限城', '不限', '全国']);
+        if (normalizedCity && !noLimitCities.has(normalizedCity)) {
+          where.city = { [Op.like]: `%${normalizedCity}%` };
+        }
       
       if (minPrice || maxPrice) {
           where.price = {};
@@ -42,12 +46,31 @@ const hotelSearchTool = new DynamicStructuredTool({
           if (maxPrice) where.price[Op.lte] = maxPrice;
       }
       
-      if (parsedKeyword) {
-          where[Op.or] = [
-              { name: { [Op.like]: `%${parsedKeyword}%` } },
-              { address: { [Op.like]: `%${parsedKeyword}%` } },
-              Sequelize.where(Sequelize.cast(Sequelize.col('tags'), 'CHAR'), 'LIKE', `%${parsedKeyword}%`) // 安全参数化的 JSON 强转方案，避免 SQL 注入
+        if (parsedKeyword) {
+          const keywordLike = `%${parsedKeyword}%`;
+          // Find matching RoomTypes first
+          const matchingRoomTypes = await RoomType.findAll({
+              attributes: ['hotel_id'],
+              where: {
+                  [Op.or]: [
+                { name: { [Op.like]: keywordLike } }
+                  ]
+              },
+              raw: true
+          });
+          const roomTypeHotelIds = matchingRoomTypes.map(rt => rt.hotel_id);
+
+          const keywordOr = [
+            { name: { [Op.like]: keywordLike } },
+            { address: { [Op.like]: keywordLike } },
+            Sequelize.where(Sequelize.cast(Sequelize.col('tags'), 'CHAR'), 'LIKE', keywordLike) // 安全参数化的 JSON 强转方案
           ];
+
+          if (roomTypeHotelIds.length > 0) {
+            keywordOr.push({ id: { [Op.in]: roomTypeHotelIds } });
+          }
+
+          where[Op.or] = keywordOr;
       }
 
       // 智能排序逻辑

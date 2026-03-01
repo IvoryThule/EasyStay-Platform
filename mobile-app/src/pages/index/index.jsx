@@ -18,6 +18,8 @@ import './index.scss'
 import { Calendar, Popup } from '@nutui/nutui-react-taro'
 import request from '../../utils/request';
 import AiFloatBall from '../../components/AiFloatBall';
+import { FaMapMarkerAlt, FaSearch, FaStar, FaTags, FaBed, FaUserFriends, FaChild } from 'react-icons/fa';
+import { MdFilterList, MdHotel } from 'react-icons/md';
 
 // 设置dayjs本地化
 dayjs.locale('zh-cn')
@@ -77,6 +79,8 @@ export default function Index() {
     nights: 1,
     keyword: '',
     guests: 2,
+    adults: 2,
+    children: 0,
     rooms: 1
   })
 
@@ -630,11 +634,10 @@ export default function Index() {
                 <Text className="location-value">{searchParams.city}</Text>
               </View>
               <View
-
                 className="location-btn"
                 onClick={useMyLocation}
               >
-                <Text className="btn-icon">🎯</Text>
+                <FaMapMarkerAlt className="btn-icon-svg" size={20} />
                 <Text className="btn-text">我的位置</Text>
               </View>
             </View>
@@ -669,9 +672,10 @@ export default function Index() {
 
             {/* 关键词搜索 */}
             <View className="search-row keyword-row">
+              <FaSearch className="search-icon-svg" size={20} color="#9CA3AF" />
               <Input
                 className="search-input"
-                placeholder="🔍 关键字/位置/品牌/酒店名"
+                placeholder=" 关键字/位置/品牌/酒店名"
                 placeholderClass="placeholder"
                 value={searchParams.keyword}
                 onInput={(e) => setSearchParams(prev => ({
@@ -691,30 +695,80 @@ export default function Index() {
               )}
             </View>
 
-            {/* 房间数量 */}
-            <View className="search-row rooms-row">
-              <Text className="rooms-label">房间数量</Text>
-              <View className="rooms-controls">
-                <Button
-                  className="control-btn minus"
-                  onClick={() => setSearchParams(prev => ({
-                    ...prev,
-                    rooms: Math.max(1, prev.rooms - 1)
-                  }))}
-                >
-                  -
-                </Button>
-                <Text className="rooms-count">{searchParams.rooms}间</Text>
-                <Button
-                  className="control-btn plus"
-                  onClick={() => setSearchParams(prev => ({
-                    ...prev,
-                    rooms: prev.rooms + 1
-                  }))}
-                >
-                  +
-                </Button>
-              </View>
+            {/* 房间数量 & 人数 */}
+            <View className="search-row rooms-row" style={{flexDirection: 'column', alignItems: 'flex-start', gap: '10px'}}>
+               <View style={{display:'flex', width: '100%', justifyContent:'space-between', alignItems:'center'}}>
+                  <Text className="rooms-label">房间</Text>
+                  <View className="rooms-controls">
+                    <Button
+                      className="control-btn minus"
+                      onClick={() => setSearchParams(prev => ({
+                        ...prev,
+                        rooms: Math.max(1, prev.rooms - 1)
+                      }))}
+                    >
+                      -
+                    </Button>
+                    <Text className="rooms-count">{searchParams.rooms}间</Text>
+                    <Button
+                      className="control-btn plus"
+                      onClick={() => setSearchParams(prev => ({
+                        ...prev,
+                        rooms: prev.rooms + 1
+                      }))}
+                    >
+                      +
+                    </Button>
+                  </View>
+               </View>
+               <View style={{display:'flex', width: '100%', justifyContent:'space-between', alignItems:'center'}}>
+                  <Text className="rooms-label" style={{fontSize: '28rpx'}}>成人</Text>
+                  <View className="rooms-controls">
+                    <Button
+                      className="control-btn minus"
+                      onClick={() => setSearchParams(prev => ({
+                        ...prev,
+                        adults: Math.max(1, prev.adults - 1)
+                      }))}
+                    >
+                      -
+                    </Button>
+                    <Text className="rooms-count">{searchParams.adults}人</Text>
+                    <Button
+                      className="control-btn plus"
+                      onClick={() => setSearchParams(prev => ({
+                        ...prev,
+                        adults: prev.adults + 1
+                      }))}
+                    >
+                      +
+                    </Button>
+                  </View>
+               </View>
+               <View style={{display:'flex', width: '100%', justifyContent:'space-between', alignItems:'center'}}>
+                  <Text className="rooms-label" style={{fontSize: '28rpx'}}>儿童</Text>
+                  <View className="rooms-controls">
+                    <Button
+                      className="control-btn minus"
+                      onClick={() => setSearchParams(prev => ({
+                        ...prev,
+                        children: Math.max(0, prev.children - 1)
+                      }))}
+                    >
+                      -
+                    </Button>
+                    <Text className="rooms-count">{searchParams.children}人</Text>
+                    <Button
+                      className="control-btn plus"
+                      onClick={() => setSearchParams(prev => ({
+                        ...prev,
+                        children: prev.children + 1
+                      }))}
+                    >
+                      +
+                    </Button>
+                  </View>
+               </View>
             </View>
 
             {/* 筛选行 */}
@@ -726,7 +780,7 @@ export default function Index() {
               }}
             >
               <View className="filter-left">
-                <Text className="filter-icon">🏷️</Text> {/* 保持图标一致 */}
+                <MdFilterList className="filter-icon-svg" size={24} color="#2563eb" />
                 <View className="filter-info">
                   <Text className="filter-label">价格/星级</Text>
                   <Text className={`filter-value ${(filterParams.price.value === 'all' && filterParams.star.value === 'all') ? 'placeholder' : ''}`}>

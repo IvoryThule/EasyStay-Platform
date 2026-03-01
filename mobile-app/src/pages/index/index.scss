@@ -483,7 +483,7 @@ $font-weight-bold: 700;
     
     // 开始搜索按钮 - 横向拉大，字体变大
     .search-button {
-      background: linear-gradient(to right, $primary-color, $secondary-color); // 参照HTML中的from-blue-600 to-indigo-600
+      background: $primary-color; // 使用纯色，去除AI感渐变
       color: #FFFFFF;
       border: none;
       border-radius: $radius-xl; // 参照HTML中的rounded-2xl

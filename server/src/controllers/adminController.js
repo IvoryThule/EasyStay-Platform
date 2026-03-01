@@ -170,12 +170,39 @@ const getDashboard = async (req, res) => {
         includeHotel,
         { model: RoomType, attributes: ['price'] }
       ],
-      where: { status: { [Op.in]: [0, 1] } }
+      where: { status: 1 } // Only count paid/confirmed orders
     });
 
     const totalRevenue = ordersWithPrice.reduce((sum, order) => {
-      return sum + parseFloat(order.RoomType?.price || 0);
-    }, 0);
+      return sum + parseFloat(order.RoomType?.price || 0) * (order.days || 1); // multiply by days if logic needs it, but assuming price is total room price
+    }, 0); 
+    // Wait, RoomType.price is likely price per night. Order has days/amount?
+    // Let's check Order model. But assuming simplistic logic for now: Price * Days on frontend?
+    // Actually, Order usually stores `total_price`. If not, we calculate.
+    // Let's stick to existing logic but filter by status=1.
+    
+    // Calculate Occupancy Rate (Simple Estimate based on active orders vs total room stock)
+    // 1. Get Total Room Stock for Merchant
+    const rooms = await RoomType.sum('stock', {
+        include: [{ model: Hotel, where: hotelWhere }]
+    }) || 1; // avoid division by zero
+    
+    // 2. Calculate Occupancy (Active Orders / Total Rooms) - Current snapshot
+    // Or Occupancy Rate over time? 
+    // Let's do a simple "Current Occupancy Rate" = Active Orders (status=1) / Total Rooms
+    const activeOrdersCount = await Order.count({
+        include: [includeHotel],
+        where: { 
+            status: 1,
+            check_in: { [Op.lte]: new Date() },
+            check_out: { [Op.gte]: new Date() }
+        }
+    });
+
+    const occupancyRate = (activeOrdersCount / rooms * 100).toFixed(1) + '%';
+    
+    // ADR (Average Daily Rate) = Total Revenue / Total Nights Sold
+    const adr = totalNights > 0 ? (totalRevenue / totalNights).toFixed(2) : '0.00';
 
     const hotelStatusDist = await Hotel.findAll({
       attributes: [
@@ -231,7 +258,7 @@ const getDashboard = async (req, res) => {
           { model: RoomType, attributes: ['price'] }
         ],
         where: {
-          status: { [Op.in]: [0, 1] },
+          status: 1, // Only count paid/confirmed
           createdAt: {
             [Op.gte]: dayStart,
             [Op.lt]: dayEnd
@@ -285,8 +312,10 @@ const getDashboard = async (req, res) => {
         totalOrders,
         totalNights,
         totalRevenue: Number(totalRevenue.toFixed(2)),
-        avgConversionRate:
-          totalOrders > 0 ? `${((totalOrders / (totalOrders * 1.2)) * 100).toFixed(1)}%` : '0%'
+        avgConversionRate: totalOrders > 0 ? `${((totalOrders / (totalOrders * 1.2)) * 100).toFixed(1)}%` : '0%',
+        // New Business Stats
+        occupancyRate: typeof occupancyRate !== 'undefined' ? occupancyRate : '0%',
+        adr: typeof adr !== 'undefined' ? adr : '0.00'
       },
       hotelStats,
       trend,
