@@ -163,35 +163,62 @@ const getDashboard = async (req, res) => {
       include: [includeHotel]
     });
 
-    const totalNights = totalOrders;
-
+    // 获取所有已支付订单用于计算营收和间夜量
     const ordersWithPrice = await Order.findAll({
+      where: { 
+        status: 1, // 已支付/已确认
+        // 确保关联到商家的酒店
+      },
       include: [
-        includeHotel,
-        { model: RoomType, attributes: ['price'] }
-      ],
-      where: { status: 1 } // Only count paid/confirmed orders
+        { 
+            model: Hotel, 
+            where: hotelWhere, 
+            attributes: [] 
+        }, 
+        { 
+            model: RoomType, 
+            attributes: ['price'] 
+        }
+      ]
     });
 
+    const totalNights = ordersWithPrice.reduce((acc, order) => {
+        const start = new Date(order.check_in);
+        const end = new Date(order.check_out);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+        return acc + diffDays;
+    }, 0);
+
     const totalRevenue = ordersWithPrice.reduce((sum, order) => {
-      return sum + parseFloat(order.RoomType?.price || 0) * (order.days || 1); // multiply by days if logic needs it, but assuming price is total room price
-    }, 0); 
-    // Wait, RoomType.price is likely price per night. Order has days/amount?
-    // Let's check Order model. But assuming simplistic logic for now: Price * Days on frontend?
-    // Actually, Order usually stores `total_price`. If not, we calculate.
-    // Let's stick to existing logic but filter by status=1.
+      const start = new Date(order.check_in);
+      const end = new Date(order.check_out);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+      return sum + parseFloat(order.RoomType?.price || 0) * diffDays;
+    }, 0);
+
+    // 计算入住率 (简单估算：活跃订单数 / 总房源库存)
+    // 1. 获取商家的总房源库存
+    // 使用原始查询避免 Sequelize 的聚合包含问题
+    const roomStockResult = await RoomType.findAll({
+        attributes: [
+            [sequelize.fn('SUM', sequelize.col('stock')), 'totalStock']
+        ],
+        include: [{
+            model: Hotel,
+            where: hotelWhere,
+            attributes: []
+        }],
+        raw: true
+    });
     
-    // Calculate Occupancy Rate (Simple Estimate based on active orders vs total room stock)
-    // 1. Get Total Room Stock for Merchant
-    const rooms = await RoomType.sum('stock', {
-        include: [{ model: Hotel, where: hotelWhere }]
-    }) || 1; // avoid division by zero
-    
-    // 2. Calculate Occupancy (Active Orders / Total Rooms) - Current snapshot
-    // Or Occupancy Rate over time? 
-    // Let's do a simple "Current Occupancy Rate" = Active Orders (status=1) / Total Rooms
+    const rooms = parseInt(roomStockResult[0]?.totalStock || 0, 10);
+    const totalRooms = rooms || 1; // 避免除以零
+
+    // 2. 计算入住率 (活跃订单数 / 总房源)
     const activeOrdersCount = await Order.count({
-        include: [includeHotel],
+        include: [{ model: Hotel, where: hotelWhere, attributes: [] }],
         where: { 
             status: 1,
             check_in: { [Op.lte]: new Date() },
@@ -199,9 +226,11 @@ const getDashboard = async (req, res) => {
         }
     });
 
-    const occupancyRate = (activeOrdersCount / rooms * 100).toFixed(1) + '%';
+    // 限制入住率最高 100%
+    const occupancyRateVal = (activeOrdersCount / totalRooms * 100);
+    const occupancyRate = (occupancyRateVal > 100 ? 100 : occupancyRateVal).toFixed(1) + '%';
     
-    // ADR (Average Daily Rate) = Total Revenue / Total Nights Sold
+    // ADR (日均房价) = 总营收 / 总售出间夜
     const adr = totalNights > 0 ? (totalRevenue / totalNights).toFixed(2) : '0.00';
 
     const hotelStatusDist = await Hotel.findAll({
@@ -221,54 +250,60 @@ const getDashboard = async (req, res) => {
     });
 
     const trend = [];
+    
+    // 优化：一次性获取最近7天的所有相关订单，而不是循环查询数据库
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    
+    const recentOrders = await Order.findAll({
+        attributes: ['id', 'status', 'check_in', 'check_out', 'createdAt'],
+        include: [
+            { 
+                model: Hotel, 
+                where: hotelWhere, 
+                attributes: [] 
+            },
+            {
+                model: RoomType,
+                attributes: ['price']
+            }
+        ],
+        where: {
+            createdAt: {
+                [Op.gte]: sevenDaysAgo
+            }
+        }
+    });
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      const dayStart = new Date(`${dateStr} 00:00:00`);
-      const dayEnd = new Date(new Date(dateStr).getTime() + 86400000);
+      
+      // 在内存中过滤当天的订单
+      const daysOrders = recentOrders.filter(o => 
+          new Date(o.createdAt).toISOString().split('T')[0] === dateStr
+      );
 
-      const dayOrders = await Order.findAll({
-        include: [includeHotel],
-        where: {
-          createdAt: {
-            [Op.gte]: dayStart,
-            [Op.lt]: dayEnd
-          }
-        }
-      });
+      const dayOrderCount = daysOrders.length;
       
-      const dayOrderCount = dayOrders.length;
+      // 计算当天已支付订单的营收和间夜
+      const paidOrders = daysOrders.filter(o => o.status === 1);
       
-      // Calculate room nights for daily trend (Paid orders only)
       let dayNights = 0;
-      dayOrders.forEach(o => {
-          if (o.status === 1) { // Only count paid/booked orders
-              const start = new Date(o.check_in);
-              const end = new Date(o.check_out);
-              const diffTime = Math.abs(end - start);
-              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1; 
-              dayNights += diffDays;
-          }
-      });
+      let dayRevenue = 0;
 
-      const dayOrdersWithPrice = await Order.findAll({
-        include: [
-          includeHotel,
-          { model: RoomType, attributes: ['price'] }
-        ],
-        where: {
-          status: 1, // Only count paid/confirmed
-          createdAt: {
-            [Op.gte]: dayStart,
-            [Op.lt]: dayEnd
-          }
-        }
+      paidOrders.forEach(order => {
+          const start = new Date(order.check_in);
+          const end = new Date(order.check_out);
+          const diffTime = Math.abs(end - start);
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1; 
+          
+          dayNights += diffDays;
+          dayRevenue += parseFloat(order.RoomType?.price || 0) * diffDays;
       });
-
-      const dayRevenue = dayOrdersWithPrice.reduce((sum, item) => {
-        return sum + parseFloat(item.RoomType?.price || 0);
-      }, 0);
 
       trend.push({
         date: `${date.getMonth() + 1}-${date.getDate()}`,
