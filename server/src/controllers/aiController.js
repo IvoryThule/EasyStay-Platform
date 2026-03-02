@@ -4,6 +4,42 @@ const { success, fail } = require('../utils/response')
 const AgentService = require('../services/agentService')
 
 /**
+ * 提取所有 search_hotels 中间步骤中的酒店数据，合并去重
+ */
+function extractHotelCards(intermediateSteps) {
+  const allHotels = new Map();
+  for (const step of intermediateSteps) {
+    if (step.action.tool !== 'search_hotels' || !step.observation) continue;
+    try {
+      if (typeof step.observation === 'string' && step.observation.startsWith('[')) {
+        const hotelList = JSON.parse(step.observation);
+        if (Array.isArray(hotelList)) {
+          for (const h of hotelList) {
+            if (h.name && !allHotels.has(h.name)) {
+              allHotels.set(h.name, {
+                ...h,
+                tags: typeof h.tags === 'string' ? h.tags.split(',') : h.tags,
+                recommend_reason: 'Agent 智能精选'
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("解析工具返回记录失败", err);
+    }
+  }
+  return allHotels;
+}
+
+/**
+ * 清理 Markdown 标记以适配移动端
+ */
+function cleanMarkdown(text) {
+  return (text || '').replace(/\*\*/g, '').replace(/#/g, '').replace(/_/g, '');
+}
+
+/**
  * POST /api/ai/chat
  * 兼容:
  * - 新版: { message, history, sessionContext, debug }
@@ -33,32 +69,12 @@ exports.chat = async (req, res) => {
       log: step.action.log
     }));
 
-    // 让前端兼容重现出 "hotel_cards"
-    let type = 'text';
-    let cards = [];
-    
-    const searchStep = intermediateSteps.find(step => step.action.tool === 'search_hotels');
-    if (searchStep && searchStep.observation) {
-      try {
-        if (typeof searchStep.observation === 'string' && searchStep.observation.startsWith('[')) {
-          const hotelList = JSON.parse(searchStep.observation);
-          if (Array.isArray(hotelList) && hotelList.length > 0) {
-            type = 'hotel_cards';
-            cards = hotelList.map(h => ({
-              ...h,
-              // Tag 可能需要重新展开给前端显示
-              tags: typeof h.tags === 'string' ? h.tags.split(',') : h.tags,
-              recommend_reason: 'Agent 智能精选'
-            }));
-          }
-        }
-      } catch (err) {
-        console.error("解析工具返回记录失败", err);
-      }
-    }
+    // 提取所有酒店卡片数据（合并多次搜索结果）
+    const allHotels = extractHotelCards(intermediateSteps);
+    const type = allHotels.size > 0 ? 'hotel_cards' : 'text';
+    const cards = Array.from(allHotels.values());
 
-    // Agent 回复可能包含 Markdown (`**粗体**`)。为了在小程序/移动端不出乱码，我们做个简单的清理
-    const cleanOutput = output.replace(/\*\*/g, '').replace(/#/g, '').replace(/_/g, '');
+    const cleanOutput = cleanMarkdown(output);
 
     return success(res, {
       reply: cleanOutput,
@@ -138,5 +154,99 @@ exports.generateSlogan = async (req, res) => {
   } catch (err) {
     console.error('AI Generate Slogan Error:', err)
     return fail(res, '生成推荐语异常', 500)
+  }
+}
+
+/**
+ * POST /api/ai/chat/stream
+ * SSE 流式聊天接口 — 实时推送思考过程和工具调用状态
+ * Body: { message, history, sessionContext }
+ * 
+ * SSE 事件类型:
+ *   thinking   - Agent 开始新一轮推理 { iteration, maxIterations }
+ *   tool_start - 开始调用工具 { tool, args }
+ *   tool_end   - 工具调用完成 { tool, success, error? }
+ *   complete   - 最终结果（与 /chat 返回格式一致）
+ *   error      - 出错 { message }
+ */
+exports.chatStream = async (req, res) => {
+  // 设置 SSE 响应头
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // nginx 禁用缓冲
+  res.flushHeaders();
+
+  let clientDisconnected = false;
+  // 关键: 必须监听 res.on('close') 而非 req.on('close')
+  // req.on('close') 在 POST body 消费完就触发，不代表客户端断开
+  // res.on('close') 仅在底层 TCP 连接关闭时触发（真正的断开）
+  res.on('close', () => {
+    if (!clientDisconnected) {
+      clientDisconnected = true;
+      clearInterval(heartbeatTimer);
+      console.log('SSE: 客户端断开连接');
+    }
+  });
+
+  // 核心: SSE 心跳保活 — 每 10 秒发送注释帧，防止 proxy/浏览器因空闲断开连接
+  const heartbeatTimer = setInterval(() => {
+    if (clientDisconnected) return clearInterval(heartbeatTimer);
+    try { res.write(': heartbeat\n\n'); } catch { clearInterval(heartbeatTimer); }
+  }, 10000);
+
+  const sendSSE = (event, data) => {
+    if (clientDisconnected) return;
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch (e) { /* client gone */ }
+  };
+
+  try {
+    const body = req.body || {};
+    const message = String(body.message || body.prompt || '').trim();
+    const history = Array.isArray(body.history) ? body.history : [];
+    const newSessionContext = body.sessionContext && typeof body.sessionContext === 'object'
+      ? body.sessionContext : {};
+
+    if (!message) {
+      sendSSE('error', { message: '请输入您的问题' });
+      clearInterval(heartbeatTimer);
+      return res.end();
+    }
+
+    // 调用 Agent，传入 onEvent 回调实现实时推送
+    const { output, intermediateSteps } = await AgentService.chat(message, history, (event) => {
+      sendSSE(event.type, event.data);
+    });
+
+    // 提取酒店卡片
+    const allHotels = extractHotelCards(intermediateSteps);
+    const type = allHotels.size > 0 ? 'hotel_cards' : 'text';
+    const cards = Array.from(allHotels.values());
+    const cleanOutput = cleanMarkdown(output);
+
+    const thoughtProcess = intermediateSteps.map(step => ({
+      tool: step.action.tool,
+      toolInput: step.action.toolInput,
+      log: step.action.log
+    }));
+
+    // 发送最终完整结果
+    sendSSE('complete', {
+      reply: cleanOutput,
+      content: cleanOutput,
+      message: { type, text: cleanOutput, cards },
+      sessionContext: newSessionContext,
+      thoughtProcess
+    });
+
+    clearInterval(heartbeatTimer);
+    res.end();
+  } catch (err) {
+    console.error('AI Chat Stream Error:', err);
+    sendSSE('error', { message: '服务异常，请稍后再试' });
+    clearInterval(heartbeatTimer);
+    res.end();
   }
 }

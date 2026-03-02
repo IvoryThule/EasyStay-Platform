@@ -3,6 +3,15 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// 全局安全网: 防止未捕获的 Promise 拒绝导致进程崩溃
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Unhandled Promise Rejection (已拦截，不会崩溃):', reason?.message || reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception (已拦截):', err.message);
+  // 不调用 process.exit()，保持服务运行
+});
+
 const app = express();
 // 配置 CORS
 app.use(cors({

@@ -3,6 +3,29 @@ const { ChatPromptTemplate, MessagesPlaceholder } = require("@langchain/core/pro
 const { HumanMessage, AIMessage, ToolMessage } = require("@langchain/core/messages");
 const { hotelSearchTool, routePlannerTool, attractionFinderTool, restaurantFinderTool, weatherReportTool, currencyConverterTool, timezoneConverterTool } = require("./tools");
 
+/**
+ * 安全的超时 Promise 竞争 — 防止未处理的 Promise Rejection 导致进程崩溃
+ * 核心区别: 当超时 reject 时，会主动 silence 输掉的 promise
+ */
+function withTimeout(promise, ms, errorMsg) {
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(errorMsg)), ms);
+  });
+
+  return Promise.race([promise, timeoutPromise])
+    .then(result => {
+      clearTimeout(timeoutId);
+      return result;
+    })
+    .catch(error => {
+      clearTimeout(timeoutId);
+      // 关键: 给输掉的 promise 挂一个空 catch，防止它后续 reject 变成 unhandled rejection
+      promise.catch(() => {});
+      throw error;
+    });
+}
+
 class AgentService {
   constructor() {
     this.model = null;
@@ -50,6 +73,14 @@ class AgentService {
       4. **智能交互**：
          - 对于酒店搜索：如果要预订，必须确认时间地点；但如果只是泛泛询问某房型/设施，允许在不提供具体城市的情况下进行全平台检索。
          - 其他功能：缺少关键参数（查汇率缺币种）时，主动礼貌追问。
+      
+      5. **高效执行复合任务 (IMPORTANT)**：
+         - 当用户问题包含多个子任务（如 搜酒店 + 比较距离 + 规划路线）时，你必须**高效规划**调用步骤，避免重复调用同一个工具。
+         - 在一次工具调用中尽可能获取足够信息，不要反复用不同关键词搜索同一批数据。
+         - 对于"哪个酒店离XX最近"这类问题，先用 search_hotels 获取酒店列表，然后根据地址信息直接判断哪个最近（或调用 routeplanner 验证），不要反复搜索。
+         - **景点游玩路线规划**：必须先用 attractionfinder 获取景点的准确地址，然后再用 routeplanner 基于准确地址规划路线。禁止在没有获取精确地址前直接用模糊地名调用 routeplanner。
+         - **工具调用数量限制**：单次回复中，同一个工具最多调用 3 次。如果需要规划多个景点的路线，选择最核心的 3-5 个景点即可，不需要面面俱到。
+         - 所有子任务完成后，在一条消息中统一回复用户。
          
       当前系统时间：{current_time}
       `],
@@ -71,6 +102,8 @@ class AgentService {
           baseURL: "https://open.bigmodel.cn/api/paas/v4/" 
         },
         temperature: 0.6, 
+        timeout: 55000,   // HTTP 级别超时 55s，确保请求真正被取消而非悬挂
+        maxRetries: 1,    // 减少重试次数，避免超时后又等一轮
       });
       this.modelWithTools = this.model.bindTools(this.tools);
     }
@@ -78,8 +111,12 @@ class AgentService {
 
   /**
    * 无状态聊天接口，历史由请求端传入以适配高并发场景
+   * @param {string} message 用户消息
+   * @param {Array} history 历史消息
+   * @param {Function|null} onEvent 可选回调，用于SSE流式推送事件
+   *   onEvent({ type: 'thinking'|'tool_start'|'tool_end'|'done'|'error', data: {...} })
    */
-  async chat(message, history = []) {
+  async chat(message, history = [], onEvent = null) {
     this.initModel();
 
     console.log(`🤖 Agent 收到消息: ${message}`);
@@ -107,39 +144,65 @@ class AgentService {
         });
 
         let currentMessages = [...messages];
-        const MAX_ITERATIONS = 3;
+        const MAX_ITERATIONS = 8;
+
+        const emit = (type, data) => {
+            if (onEvent) try { onEvent({ type, data }); } catch(e) { /* ignore */ }
+        };
 
         for (let i = 0; i < MAX_ITERATIONS; i++) {
-            // Invoke the model with the current conversation history + intermediate steps + Timeout
-            const response = await Promise.race([
-                activeModel.invoke(currentMessages),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('LLM Response Timeout (30s)')), 30000))
-            ]);
-            currentMessages.push(response);
+            console.log(`🔄 Agent 迭代轮次: ${i + 1}/${MAX_ITERATIONS}`);
+            emit('thinking', { iteration: i + 1, maxIterations: MAX_ITERATIONS });
+
+            // 使用 stream() 替代 invoke()，实现真正的 token 流式输出
+            let fullResponse = null;
+            const streamTask = (async () => {
+                const stream = await activeModel.stream(currentMessages);
+                for await (const chunk of stream) {
+                    fullResponse = fullResponse ? fullResponse.concat(chunk) : chunk;
+                    // 实时推送文本 token（工具调用时 content 通常为空，不会误推）
+                    if (chunk.content) {
+                        emit('token', { content: chunk.content });
+                    }
+                }
+            })();
+
+            await withTimeout(streamTask, 60000, 'LLM Response Timeout (60s)');
+            currentMessages.push(fullResponse);
 
             // If no tool calls, it means the model has finished its thought process
-            if (!response.tool_calls || response.tool_calls.length === 0) {
+            if (!fullResponse.tool_calls || fullResponse.tool_calls.length === 0) {
+                emit('done', { output: fullResponse.content });
                 return {
-                    output: response.content,
+                    output: fullResponse.content,
                     intermediateSteps
                 };
             }
 
+            // 有 tool calls 但之前可能误发了 token → 通知前端丢弃
+            emit('token_reset', {});
+
             // Execute all tools requested by the model in this run
-            for (const toolCall of response.tool_calls) {
+            for (const toolCall of fullResponse.tool_calls) {
                 const tool = this.tools.find(t => t.name === toolCall.name);
                 let toolResponse = "工具调用失败 (未找到匹配的工具)";
 
                 if (tool) {
                     try {
                         console.log(`🔨 执行工具 [${toolCall.name}] 参数:`, toolCall.args);
-                        toolResponse = await Promise.race([
+                        emit('tool_start', { tool: toolCall.name, args: toolCall.args });
+                        // 路线规划等涉及多次外部API调用的工具需要更长超时
+                        const toolTimeout = ['routeplanner', 'attractionfinder', 'restaurantfinder'].includes(toolCall.name) ? 20000 : 10000;
+                        toolResponse = await withTimeout(
                             tool.invoke(toolCall.args),
-                            new Promise((_, reject) => setTimeout(() => reject(new Error('工具执行超时 (5s)')), 5000))
-                        ]);
+                            toolTimeout,
+                            `工具执行超时 (${toolTimeout/1000}s)`
+                        );
+                        emit('tool_end', { tool: toolCall.name, success: true });
                     } catch (error) {
-                        console.error(`❌ 工具 [${toolCall.name}] 执行错误:`, error);
+                        console.error(`❌ 工具 [${toolCall.name}] 执行错误:`, error.message);
                         toolResponse = `执行失败: ${error.message}`;
+                        emit('tool_end', { tool: toolCall.name, success: false, error: error.message });
                     }
                 }
 
@@ -164,13 +227,48 @@ class AgentService {
             }
         }
 
-        // If it exits the loop, iteration limit reached
+        // If it exits the loop, iteration limit reached - try to give a partial answer based on collected data
+        console.warn(`⚠️ Agent 达到最大迭代次数 (${MAX_ITERATIONS})，尝试基于已有数据生成回复...`);
+        
+        // 最后给模型一次机会，不绑定工具，强制它基于已有上下文做总结
+        try {
+            emit('thinking', { iteration: 'final', maxIterations: MAX_ITERATIONS, note: '正在整理已有信息...' });
+            let finalResponse = null;
+            const finalStreamTask = (async () => {
+                const stream = await this.model.stream(currentMessages);
+                for await (const chunk of stream) {
+                    finalResponse = finalResponse ? finalResponse.concat(chunk) : chunk;
+                    if (chunk.content) {
+                        emit('token', { content: chunk.content });
+                    }
+                }
+            })();
+            await withTimeout(finalStreamTask, 30000, 'Final summary timeout');
+            if (finalResponse && finalResponse.content) {
+                return {
+                    output: finalResponse.content,
+                    intermediateSteps
+                };
+            }
+        } catch (fallbackErr) {
+            console.error('⚠️ 兜底总结也失败:', fallbackErr.message);
+        }
+        
         return {
-            output: "抱歉，由于任务过于复杂，我无法在此刻得出最终结果，请缩小搜索范围后再试。",
+            output: "抱歉，由于任务较复杂处理时间较长。根据已获取的信息，建议您缩小搜索范围后再试，或将问题拆分为多条消息逐步提问。",
             intermediateSteps
         };
     } catch (error) {
-        console.error("❌ Agent Engine Error:", error);
+        console.error("❌ Agent Engine Error:", error.message || error);
+        emit('error', { message: error.message || '系统异常' });
+        
+        // 如果有中间步骤数据，尝试给出部分结果而非完全失败
+        if (intermediateSteps.length > 0) {
+            return {
+                output: "抱歉，处理过程中遇到了一些问题，但已获取到部分信息。请稍后重试或尝试简化您的问题。",
+                intermediateSteps
+            };
+        }
         return {
             output: "抱歉，我的系统似乎遇到了一点小麻烦，请稍后再试。",
             intermediateSteps: []

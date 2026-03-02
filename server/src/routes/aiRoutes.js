@@ -11,6 +11,11 @@ const { success, fail } = require('../utils/response');
 router.post('/chat', aiController.chat);
 
 /**
+ * SSE 流式聊天接口 — H5 端使用，实时推送思考过程
+ */
+router.post('/chat/stream', aiController.chatStream);
+
+/**
  * 智能推荐接口
  */
 router.post('/recommend', aiController.recommend);

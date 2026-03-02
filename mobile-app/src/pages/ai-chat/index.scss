@@ -279,3 +279,18 @@
   50% { opacity: 1; }
   100% { opacity: 0.6; }
 }
+
+/* 流式打字机效果 */
+.bubble.streaming {
+  border: 1px solid #e6f4ff;
+}
+.typing-cursor {
+  display: inline;
+  color: #1890ff;
+  font-weight: bold;
+  animation: blink 0.8s step-end infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
