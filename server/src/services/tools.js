@@ -119,10 +119,36 @@ const routePlannerTool = new DynamicStructuredTool({
   func: async ({ from, to, city = '', mode = "transit" }) => {
     console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}] city=${city}`);
     
+    /**
+     * 智能地理编码: 先尝试地址解析，失败则回退到 POI 搜索
+     * 解决餐厅/景点名称（如"山葵叔叔·泥炉烤肉"）无法直接地理编码的问题
+     */
+    async function smartGeocode(name, cityHint) {
+      // 1. 先尝试标准地理编码
+      let geo = await getLocationByAddress(name, cityHint);
+      if (geo) return geo;
+      
+      // 2. 地理编码失败 → 回退到 POI 搜索获取坐标
+      console.log(`📍 地理编码失败，回退到 POI 搜索: ${name}`);
+      const pois = await searchPOI(name, cityHint, '', 1);
+      if (pois && pois.length > 0 && pois[0].location) {
+        const [lng, lat] = pois[0].location.split(',');
+        return {
+          longitude: Number(lng),
+          latitude: Number(lat),
+          rawLocation: pois[0].location,
+          citycode: pois[0].citycode || '',
+          city: pois[0].cityname || cityHint
+        };
+      }
+      
+      return null;
+    }
+
     // 1. 获取起终点坐标 (传入城市约束，避免跨城误匹配)
     const [originGeo, destGeo] = await Promise.all([
-        getLocationByAddress(from, city),
-        getLocationByAddress(to, city)
+        smartGeocode(from, city),
+        smartGeocode(to, city)
     ]);
     
     if (!originGeo || !destGeo) {
