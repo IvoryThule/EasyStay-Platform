@@ -109,7 +109,7 @@ const hotelSearchTool = new DynamicStructuredTool({
 // ---- 真实工具: 路线规划 (routeplanner) - 基于高德路径规划 ----
 const routePlannerTool = new DynamicStructuredTool({
   name: "routeplanner",
-  description: "用于规划路线，计算从出发地到目的地的最佳交通方式，调用真实地图API。必须提供城市参数以确保地址解析准确。",
+  description: "用于规划路线，计算从出发地到目的地的真实步行/公交/驾车距离和时间。调用真实地图API，返回精确的距离和耗时数据。必须提供城市参数以确保地址解析准确。注意：短途（<5km）建议用walking模式，较远距离用transit模式。",
   schema: z.object({
     from: z.string().describe("出发地名称，越详细越好，例如'全季酒店(北京国贸店)'"),
     to: z.string().describe("目的地名称，越详细越好，例如'北京前门大街'"),
@@ -120,27 +120,35 @@ const routePlannerTool = new DynamicStructuredTool({
     console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}] city=${city}`);
     
     /**
-     * 智能地理编码: 先尝试地址解析，失败则回退到 POI 搜索
-     * 解决餐厅/景点名称（如"山葵叔叔·泥炉烤肉"）无法直接地理编码的问题
+     * 智能地理编码: 优先 POI 搜索（更适合景点/餐厅/酒店等具名地点），
+     * 失败再回退到地址解析（更适合"XX路XX号"这类纯地址）。
+     * 
+     * 原因: getLocationByAddress("国贸花园", "北京") 可能解析到北京市内
+     * 其他同名地点，而 POI 搜索带城市限制更精准。
      */
     async function smartGeocode(name, cityHint) {
-      // 1. 先尝试标准地理编码
+      // 1. 优先用 POI 搜索 (对餐厅/景点/酒店等具名地点最精准)
+      try {
+        const pois = await searchPOI(name, cityHint, '', 1);
+        if (pois && pois.length > 0 && pois[0].location) {
+          const [lng, lat] = pois[0].location.split(',');
+          console.log(`📍 POI 搜索定位成功: ${name} -> ${pois[0].location} (${pois[0].name})`);
+          return {
+            longitude: Number(lng),
+            latitude: Number(lat),
+            rawLocation: pois[0].location,
+            citycode: pois[0].citycode || '',
+            city: pois[0].cityname || cityHint
+          };
+        }
+      } catch (e) {
+        console.warn(`📍 POI 搜索失败: ${name}`, e.message);
+      }
+      
+      // 2. POI 搜索无结果 → 回退到地理编码 (适合纯地址如"朝阳区建国路12号")
+      console.log(`📍 POI 搜索无结果，回退到地理编码: ${name}`);
       let geo = await getLocationByAddress(name, cityHint);
       if (geo) return geo;
-      
-      // 2. 地理编码失败 → 回退到 POI 搜索获取坐标
-      console.log(`📍 地理编码失败，回退到 POI 搜索: ${name}`);
-      const pois = await searchPOI(name, cityHint, '', 1);
-      if (pois && pois.length > 0 && pois[0].location) {
-        const [lng, lat] = pois[0].location.split(',');
-        return {
-          longitude: Number(lng),
-          latitude: Number(lat),
-          rawLocation: pois[0].location,
-          citycode: pois[0].citycode || '',
-          city: pois[0].cityname || cityHint
-        };
-      }
       
       return null;
     }
