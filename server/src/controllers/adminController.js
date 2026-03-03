@@ -347,7 +347,7 @@ const getDashboard = async (req, res) => {
         totalOrders,
         totalNights,
         totalRevenue: Number(totalRevenue.toFixed(2)),
-        avgConversionRate: totalOrders > 0 ? `${((totalOrders / (totalOrders * 1.2)) * 100).toFixed(1)}%` : '0%',
+        avgConversionRate: totalOrders > 0 ? `${((paidOrders / totalOrders) * 100).toFixed(1)}%` : '0%',
         // New Business Stats
         occupancyRate: typeof occupancyRate !== 'undefined' ? occupancyRate : '0%',
         adr: typeof adr !== 'undefined' ? adr : '0.00'
