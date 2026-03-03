@@ -36,8 +36,49 @@ function isH5() {
 }
 
 /**
+ * 获取可用于 SSE 流式请求的 fetch 引用
+ * 
+ * 在 Capacitor 环境中，如果 CapacitorHttp 仍然启用（劫持了 window.fetch），
+ * 则通过隐藏 iframe 获取未被 patch 的浏览器原生 fetch 以支持 ReadableStream。
+ * 当 CapacitorHttp 已禁用时，window.fetch 就是浏览器原生实现，直接使用即可。
+ */
+let _nativeFetch = null
+let _sseIframe = null // 保持 iframe 存活，防止 fetch 引用失效
+function getNativeFetch() {
+  if (_nativeFetch) return _nativeFetch
+
+  // 检测 CapacitorHttp 是否劫持了 fetch (劫持后 fetch.toString() 通常不含 'native code')
+  const isPatched = typeof window !== 'undefined'
+    && window.Capacitor
+    && typeof window.fetch === 'function'
+    && !Function.prototype.toString.call(window.fetch).includes('native code')
+
+  if (!isPatched) {
+    // 未被劫持（CapacitorHttp 已禁用或非 Capacitor 环境），直接使用
+    _nativeFetch = window.fetch.bind(window)
+    return _nativeFetch
+  }
+
+  // CapacitorHttp 仍劫持 fetch → 通过 iframe 获取原生 fetch
+  try {
+    _sseIframe = document.createElement('iframe')
+    _sseIframe.style.display = 'none'
+    _sseIframe.src = 'about:blank'
+    document.body.appendChild(_sseIframe)
+    _nativeFetch = _sseIframe.contentWindow.fetch.bind(_sseIframe.contentWindow)
+    console.log('[SSE] 已通过 iframe 获取原生 fetch (绕过 CapacitorHttp)')
+  } catch (e) {
+    console.warn('[SSE] 无法获取原生 fetch，回退到 window.fetch:', e)
+    _nativeFetch = window.fetch.bind(window)
+  }
+
+  return _nativeFetch
+}
+
+/**
  * SSE 流式请求: POST body, 逐行解析 event-stream
  * 支持心跳保活注释帧 (: heartbeat)
+ * 在 Capacitor 环境中使用未被劫持的原生 fetch 以支持流式响应
  * @param {string} url 请求路径 (如 '/ai/chat/stream')
  * @param {object} data 请求体
  * @param {function} onEvent (eventType, parsedData) => void
@@ -46,7 +87,9 @@ async function fetchSSE(url, data, onEvent) {
   const token = Taro.getStorageSync('token')
   const BASE_URL = process.env.TARO_APP_API_BASE_URL || '/api'
 
-  const response = await fetch(`${BASE_URL}${url}`, {
+  // 使用原生 fetch 以确保 ReadableStream 流式响应正常工作
+  const nativeFetch = getNativeFetch()
+  const response = await nativeFetch(`${BASE_URL}${url}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
