@@ -83,18 +83,21 @@ const hotelSearchTool = new DynamicStructuredTool({
           where,
           limit: 5, // 只取最匹配的头几个，避免 Token 爆炸
           order,
-          attributes: ['name', 'price', 'star', 'address', 'tags']
+          attributes: ['id', 'name', 'price', 'star', 'address', 'tags', 'cover_image', 'city']
       });
 
       if (hotels.length === 0) return "未找到符合条件的酒店，请如实告知用户并建议调整预算或放宽位置要求。";
       
       // 返回给 AI 的必须是字符串数据，让 AI 自行组织文案
       return JSON.stringify(hotels.map(h => ({
+          id: h.id,
           name: h.name,
           price: h.price,
           star: h.star,
           tags: Array.isArray(h.tags) ? h.tags.join(',') : h.tags,
-          address: h.address
+          address: h.address,
+          cover_image: h.cover_image,
+          city: h.city
       })));
     } catch (err) {
       console.error("🛠️ 搜索酒店工具出错:", err);
