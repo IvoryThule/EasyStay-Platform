@@ -5,6 +5,7 @@ const { Op, Sequelize } = require('sequelize');
 const { 
   getLocationByAddress, 
   searchPOI, 
+  getNearbyPOI,
   getWeather, 
   getRoute 
 } = require('./amapService');
@@ -261,20 +262,38 @@ const attractionFinderTool = new DynamicStructuredTool({
   func: async ({ city, keyword = "景点", near }) => {
     console.log(`🛠️ Agent 调用高德POI搜索(景点): ${city} [${keyword}] near=${near || '无'}`);
     
-    // 如果指定了中心点，用 smartGeocode 获取坐标（比纯地理编码更精准）
-    let centerLocation = '';
+    // 如果指定了中心点，用 周边搜索(around) API → 距离更准确
     if (near) {
       const geo = await smartGeocode(near, city);
       if (geo && geo.rawLocation) {
-        centerLocation = geo.rawLocation;
-        console.log(`📍 景点搜索中心点: ${near} -> ${centerLocation}`);
+        console.log(`📍 景点搜索中心点: ${near} -> ${geo.rawLocation}`);
+        // 使用 around API 在中心点周围搜索，半径3km
+        const pois = await getNearbyPOI(
+          geo.longitude, geo.latitude,
+          '风景名胜|公园广场|博物馆|主题公园|文物古迹',
+          3000, keyword, 10
+        );
+        
+        if (pois && pois.length > 0) {
+          return JSON.stringify(pois.map(poi => ({
+            name: poi.name,
+            type: poi.type,
+            address: poi.address,
+            rating: poi.biz_ext?.rating || '',
+            distance: poi.distance ? `直线约${poi.distance}米` : '未知',
+            distance_note: '此为直线距离，实际步行距离可能更远，需用routeplanner获取准确步行距离'
+          })));
+        }
+        // around搜索无结果时，回退到text search
+        console.log('📍 周边搜索无结果，回退到文本搜索');
       }
     }
     
-    const pois = await searchPOI(keyword, city, "风景名胜", 10, centerLocation);
+    // 无中心点 或 around搜索无结果 → 使用文本搜索
+    const pois = await searchPOI(keyword, city, "风景名胜", 10);
     
     if (!pois || pois.length === 0) {
-        return `在${city}未找到与“${keyword}”相关的景点。`;
+        return `在${city}未找到与"${keyword}"相关的景点。`;
     }
 
     return JSON.stringify(pois.map(poi => ({
@@ -282,7 +301,7 @@ const attractionFinderTool = new DynamicStructuredTool({
         type: poi.type,
         address: poi.address,
         rating: poi.rating,
-        distance: poi.distance ? `${poi.distance}米` : '未知'
+        distance: '未知(未指定中心点)'
     })));
   }
 });
@@ -299,20 +318,39 @@ const restaurantFinderTool = new DynamicStructuredTool({
   func: async ({ location, cuisine = "美食", near }) => {
     console.log(`🛠️ Agent 调用高德POI搜索(餐饮): ${location} [${cuisine}] near=${near || '无'}`);
 
-    // 如果指定了中心点，用 smartGeocode 获取坐标（比纯地理编码更精准）
-    let centerLocation = '';
+    // 如果指定了中心点，用 周边搜索(around) API → 距离更准确
     if (near) {
       const geo = await smartGeocode(near, location);
       if (geo && geo.rawLocation) {
-        centerLocation = geo.rawLocation;
-        console.log(`📍 餐厅搜索中心点: ${near} -> ${centerLocation}`);
+        console.log(`📍 餐厅搜索中心点: ${near} -> ${geo.rawLocation}`);
+        // 使用 around API 在中心点周围搜索，半径3km
+        const pois = await getNearbyPOI(
+          geo.longitude, geo.latitude,
+          '餐饮服务',
+          3000, cuisine, 10
+        );
+        
+        if (pois && pois.length > 0) {
+          return JSON.stringify(pois.map(poi => ({
+            name: poi.name,
+            type: poi.type,
+            address: poi.address,
+            rating: poi.biz_ext?.rating || '',
+            price: (poi.biz_ext?.cost && poi.biz_ext.cost !== '[]') ? `¥${poi.biz_ext.cost}` : '未知',
+            distance: poi.distance ? `直线约${poi.distance}米` : '未知',
+            distance_note: '此为直线距离，实际步行距离可能更远，需用routeplanner获取准确步行距离',
+            tel: poi.tel
+          })));
+        }
+        console.log('📍 周边搜索无结果，回退到文本搜索');
       }
     }
 
-    const pois = await searchPOI(cuisine, location, "餐饮服务", 10, centerLocation);
+    // 无中心点 或 around搜索无结果 → 使用文本搜索
+    const pois = await searchPOI(cuisine, location, "餐饮服务", 10);
     
     if (!pois || pois.length === 0) {
-        return `在${location}附近未找到“${cuisine}”。`;
+        return `在${location}附近未找到"${cuisine}"。`;
     }
 
     return JSON.stringify(pois.map(poi => ({
@@ -321,7 +359,7 @@ const restaurantFinderTool = new DynamicStructuredTool({
         address: poi.address,
         rating: poi.rating,
         price: poi.cost !== "未知" ? `¥${poi.cost}` : "未知",
-        distance: poi.distance ? `${poi.distance}米` : '未知',
+        distance: '未知(未指定中心点)',
         tel: poi.tel
     })));
   }

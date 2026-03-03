@@ -81,6 +81,8 @@ class AgentService {
          - **景点游玩路线规划**：必须先用 attractionfinder 获取景点的准确地址，然后再用 routeplanner 基于准确地址规划路线。禁止在没有获取精确地址前直接用模糊地名调用 routeplanner。
          - **地理精确性 (CRITICAL)**：
            - **严禁自行推算或编造距离和时间**。即使已知两地直线距离，也绝不可用"距离÷步速"来估算时间。距离和耗时数据**必须且只能来自工具返回值**。
+           - **attractionfinder / restaurantfinder 返回的 distance 是直线距离（鸟飞距离），不是步行距离！** 直线120米可能实际步行需要1.6公里。绝不可将直线距离当步行距离展示，也不可根据直线距离推算步行时间。
+           - 展示附近景点/餐厅时，距离请标注"直线约XX米"，步行时间只写"需使用地图APP查看"或调用routeplanner。
            - 当用户要求"规划路线"时，**必须调用 routeplanner 工具**获取真实步行/公交距离和时间，不得仅凭 attractionfinder 返回的直线距离数据来组织路线。
            - 调用 routeplanner 时必须传入 city 参数。from/to 参数尽量使用工具返回的**完整地址**而非单纯名称。例如用 "长沙市黄兴北路华润置地中心" 而非 "山葵叔叔·泥炉烤肉"。
            - 调用 attractionfinder / restaurantfinder 查询某地点附近时必须传入 near 参数（如酒店全名含分店名）。

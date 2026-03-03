@@ -54,25 +54,37 @@ const getLocationByIP = async (ip) => {
 /**
  * 根据经纬度获取周边 POI (景点/交通/商场)
  * 文档: https://lbs.amap.com/api/webservice/guide/api/search
+ * 
+ * @param {number} longitude - 经度
+ * @param {number} latitude - 纬度
+ * @param {string} types - POI类型（如'旅游景点|地铁站|购物中心'）
+ * @param {number} radius - 搜索半径(米)，默认2000
+ * @param {string} keywords - 可选关键词过滤
+ * @param {number} offset - 返回数量上限
  */
-const getNearbyPOI = async (longitude, latitude, types = '旅游景点|地铁站|购物中心', radius = 2000) => {
+const getNearbyPOI = async (longitude, latitude, types = '旅游景点|地铁站|购物中心', radius = 2000, keywords = '', offset = 10) => {
     if (!AMAP_KEY) {
         console.warn('⚠️ Amap Web Key not configured');
         return [];
     }
 
     try {
-        const url = `https://restapi.amap.com/v3/place/around?key=${AMAP_KEY}&location=${longitude},${latitude}&types=${types}&radius=${radius}&offset=10&extensions=base`;
-        const response = await axios.get(url);
+        const params = {
+            key: AMAP_KEY,
+            location: `${longitude},${latitude}`,
+            types: types,
+            radius: radius,
+            offset: offset,
+            extensions: 'all'  // 返回完整信息（含rating等）
+        };
+        if (keywords) {
+            params.keywords = keywords;
+        }
+        
+        const response = await axios.get('https://restapi.amap.com/v3/place/around', { params });
         
         if (response.data.status === '1' && response.data.pois) {
-            return response.data.pois.map(poi => ({
-                name: poi.name,
-                type: poi.type,
-                address: poi.address,
-                distance: poi.distance,
-                location: poi.location
-            }));
+            return response.data.pois;
         }
         return [];
     } catch (error) {
