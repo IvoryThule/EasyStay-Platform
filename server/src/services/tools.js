@@ -9,6 +9,43 @@ const {
   getRoute 
 } = require('./amapService');
 
+/**
+ * 智能地理编码（模块级公共函数）:
+ * 优先 POI 搜索（更适合景点/餐厅/酒店等具名地点），
+ * 失败再回退到地址解析（更适合"XX路XX号"这类纯地址）。
+ * 
+ * @param {string} name - 地点名称
+ * @param {string} cityHint - 城市名称（用于约束搜索范围）
+ * @param {string} [referenceLocation] - 参考坐标 "lng,lat"，用于 POI 搜索时按距离排序，
+ *   确保返回离参考点最近的同名地点（如最近的"樱花园"而非全城随机一个）
+ */
+async function smartGeocode(name, cityHint, referenceLocation = '') {
+  // 1. 优先用 POI 搜索 (对餐厅/景点/酒店等具名地点最精准)
+  try {
+    const pois = await searchPOI(name, cityHint, '', 1, referenceLocation);
+    if (pois && pois.length > 0 && pois[0].location) {
+      const [lng, lat] = pois[0].location.split(',');
+      console.log(`📍 POI 搜索定位成功: ${name} -> ${pois[0].location} (${pois[0].name})`);
+      return {
+        longitude: Number(lng),
+        latitude: Number(lat),
+        rawLocation: pois[0].location,
+        citycode: pois[0].citycode || '',
+        city: pois[0].cityname || cityHint
+      };
+    }
+  } catch (e) {
+    console.warn(`📍 POI 搜索失败: ${name}`, e.message);
+  }
+  
+  // 2. POI 搜索无结果 → 回退到地理编码 (适合纯地址如"朝阳区建国路12号")
+  console.log(`📍 POI 搜索无结果，回退到地理编码: ${name}`);
+  let geo = await getLocationByAddress(name, cityHint);
+  if (geo) return geo;
+  
+  return null;
+}
+
 const hotelSearchTool = new DynamicStructuredTool({
   name: "search_hotels",
   description: "当用户想要搜索酒店、查询房价、寻找住宿推荐时使用。如果用户没有指定城市，则表示在所有城市范围内搜索。不要用于查询纯粹的旅游景点或路线。",
@@ -119,49 +156,21 @@ const routePlannerTool = new DynamicStructuredTool({
   func: async ({ from, to, city = '', mode = "transit" }) => {
     console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}] city=${city}`);
     
-    /**
-     * 智能地理编码: 优先 POI 搜索（更适合景点/餐厅/酒店等具名地点），
-     * 失败再回退到地址解析（更适合"XX路XX号"这类纯地址）。
-     * 
-     * 原因: getLocationByAddress("国贸花园", "北京") 可能解析到北京市内
-     * 其他同名地点，而 POI 搜索带城市限制更精准。
-     */
-    async function smartGeocode(name, cityHint) {
-      // 1. 优先用 POI 搜索 (对餐厅/景点/酒店等具名地点最精准)
-      try {
-        const pois = await searchPOI(name, cityHint, '', 1);
-        if (pois && pois.length > 0 && pois[0].location) {
-          const [lng, lat] = pois[0].location.split(',');
-          console.log(`📍 POI 搜索定位成功: ${name} -> ${pois[0].location} (${pois[0].name})`);
-          return {
-            longitude: Number(lng),
-            latitude: Number(lat),
-            rawLocation: pois[0].location,
-            citycode: pois[0].citycode || '',
-            city: pois[0].cityname || cityHint
-          };
-        }
-      } catch (e) {
-        console.warn(`📍 POI 搜索失败: ${name}`, e.message);
-      }
-      
-      // 2. POI 搜索无结果 → 回退到地理编码 (适合纯地址如"朝阳区建国路12号")
-      console.log(`📍 POI 搜索无结果，回退到地理编码: ${name}`);
-      let geo = await getLocationByAddress(name, cityHint);
-      if (geo) return geo;
-      
-      return null;
+    // 1. 先定位起点（通常是酒店，位置明确）
+    const originGeo = await smartGeocode(from, city);
+    if (!originGeo) {
+        return `无法找到起点"${from}"的具体位置，请提供更详细的地址。`;
     }
-
-    // 1. 获取起终点坐标 (传入城市约束，避免跨城误匹配)
-    const [originGeo, destGeo] = await Promise.all([
-        smartGeocode(from, city),
-        smartGeocode(to, city)
-    ]);
     
-    if (!originGeo || !destGeo) {
-        return `无法找到"${from}"或"${to}"的具体位置，请提供更详细的地址。`;
+    // 2. 再定位终点，使用起点坐标作为proximity hint
+    //    这样搜索"樱花园"时会优先返回离酒店最近的那个，而非全城随机一个
+    const destGeo = await smartGeocode(to, city, originGeo.rawLocation);
+    
+    if (!destGeo) {
+        return `无法找到目的地"${to}"的具体位置，请提供更详细的地址。`;
     }
+    
+    console.log(`📍 路线规划: ${from}(${originGeo.rawLocation}) -> ${to}(${destGeo.rawLocation})`);
 
     // 2. 这里的 city 必填 (针对公交)，我们取 origin 的 citycode
     const routeCity = originGeo.citycode || "010"; // 默认北京，如果不幸获取失败
@@ -205,14 +214,37 @@ const routePlannerTool = new DynamicStructuredTool({
     if (!paths || paths.length === 0) return "未找到路线。";
     
     const primePath = paths[0];
+    const distKm = (primePath.distance / 1000).toFixed(1);
+    const durMin = Math.ceil(primePath.duration / 60);
+    
+    // 智能简化路线描述：只保留关键步骤，避免冗长的微转向
+    const allSteps = primePath.steps || [];
+    let routeSummary;
+    if (allSteps.length <= 3) {
+      // 步骤很少，全部展示
+      routeSummary = allSteps.map(s => s.instruction).join("；");
+    } else {
+      // 步骤多时，提取首段 + 中间关键段 + 末段，给出概览
+      const first = allSteps[0].instruction;
+      const last = allSteps[allSteps.length - 1].instruction;
+      // 筛选中间较长距离的关键步骤（过滤掉<50米的微转向）
+      const midSteps = allSteps.slice(1, -1)
+        .filter(s => {
+          const dist = parseInt(s.distance || '0');
+          return dist >= 50; // 只保留50米以上的步骤
+        })
+        .slice(0, 3) // 最多取3个关键中间步骤
+        .map(s => s.instruction);
+      routeSummary = [first, ...midSteps, last].join("；");
+    }
+    
     return JSON.stringify({
         mode,
         origin: from,
         destination: to,
-        distance: `${(primePath.distance/1000).toFixed(1)}km`,
-        duration: `${Math.ceil(primePath.duration/60)}分钟`,
-        strategy: primePath.strategy,
-        steps: primePath.steps.map(s => s.instruction).slice(0, 5).join("; ") + "..." // 简化步骤
+        distance: `${distKm}km`,
+        duration: `${durMin}分钟`,
+        route_summary: routeSummary
     });
   }
 });
@@ -229,10 +261,10 @@ const attractionFinderTool = new DynamicStructuredTool({
   func: async ({ city, keyword = "景点", near }) => {
     console.log(`🛠️ Agent 调用高德POI搜索(景点): ${city} [${keyword}] near=${near || '无'}`);
     
-    // 如果指定了中心点，先地理编码获取坐标
+    // 如果指定了中心点，用 smartGeocode 获取坐标（比纯地理编码更精准）
     let centerLocation = '';
     if (near) {
-      const geo = await getLocationByAddress(near, city);
+      const geo = await smartGeocode(near, city);
       if (geo && geo.rawLocation) {
         centerLocation = geo.rawLocation;
         console.log(`📍 景点搜索中心点: ${near} -> ${centerLocation}`);
@@ -267,10 +299,10 @@ const restaurantFinderTool = new DynamicStructuredTool({
   func: async ({ location, cuisine = "美食", near }) => {
     console.log(`🛠️ Agent 调用高德POI搜索(餐饮): ${location} [${cuisine}] near=${near || '无'}`);
 
-    // 如果指定了中心点，先地理编码获取坐标
+    // 如果指定了中心点，用 smartGeocode 获取坐标（比纯地理编码更精准）
     let centerLocation = '';
     if (near) {
-      const geo = await getLocationByAddress(near, location);
+      const geo = await smartGeocode(near, location);
       if (geo && geo.rawLocation) {
         centerLocation = geo.rawLocation;
         console.log(`📍 餐厅搜索中心点: ${near} -> ${centerLocation}`);
