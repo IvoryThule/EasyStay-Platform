@@ -159,8 +159,15 @@ const getDashboard = async (req, res) => {
 
     const includeHotel = { model: Hotel, where: hotelWhere, attributes: [] };
 
+
     const totalOrders = await Order.count({
       include: [includeHotel]
+    });
+
+    // 新增：查询已支付订单数
+    const paidOrders = await Order.count({
+      include: [includeHotel],
+      where: { status: 1 }
     });
 
     // 获取所有已支付订单用于计算营收和间夜量
