@@ -127,7 +127,7 @@ const getLocationByAddress = async (address, city = '') => {
  * 关键字搜索 POI (attractionfinder / restaurantfinder)
  * 文档: https://lbs.amap.com/api/webservice/guide/api/newpoisearch
  */
-const searchPOI = async (keywords, city, types, offset = 10) => {
+const searchPOI = async (keywords, city, types, offset = 10, location = '') => {
     if (!AMAP_KEY) return [];
 
     try {
@@ -140,6 +140,12 @@ const searchPOI = async (keywords, city, types, offset = 10) => {
             offset: offset,
             extensions: 'all'
         };
+
+        // 传入中心点坐标后，按距离排序，返回的 distance 字段才有意义
+        if (location) {
+            params.location = location;  // "lng,lat" 格式
+            params.sortrule = 'distance'; // 按距离近到远排序
+        }
         
         const response = await axios.get('https://restapi.amap.com/v3/place/text', { params });
         

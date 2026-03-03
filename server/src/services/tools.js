@@ -109,19 +109,20 @@ const hotelSearchTool = new DynamicStructuredTool({
 // ---- 真实工具: 路线规划 (routeplanner) - 基于高德路径规划 ----
 const routePlannerTool = new DynamicStructuredTool({
   name: "routeplanner",
-  description: "用于规划路线，计算从出发地到目的地的最佳交通方式，调用真实地图API。",
+  description: "用于规划路线，计算从出发地到目的地的最佳交通方式，调用真实地图API。必须提供城市参数以确保地址解析准确。",
   schema: z.object({
-    from: z.string().describe("出发地名称，越详细越好"),
-    to: z.string().describe("目的地名称，越详细越好"),
+    from: z.string().describe("出发地名称，越详细越好，例如'全季酒店(北京国贸店)'"),
+    to: z.string().describe("目的地名称，越详细越好，例如'北京前门大街'"),
+    city: z.string().optional().describe("所在城市名称（如'北京'），用于约束地址解析范围，避免跨城误匹配"),
     mode: z.enum(["driving", "walking", "transit", "bicycling"]).optional().describe("出行方式，默认为 transit (公交/地铁)")
   }),
-  func: async ({ from, to, mode = "transit" }) => {
-    console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}]`);
+  func: async ({ from, to, city = '', mode = "transit" }) => {
+    console.log(`🛠️ Agent 调用高德路线规划: ${from} -> ${to} [${mode}] city=${city}`);
     
-    // 1. 获取起终点坐标 (Parallel execution)
+    // 1. 获取起终点坐标 (传入城市约束，避免跨城误匹配)
     const [originGeo, destGeo] = await Promise.all([
-        getLocationByAddress(from),
-        getLocationByAddress(to)
+        getLocationByAddress(from, city),
+        getLocationByAddress(to, city)
     ]);
     
     if (!originGeo || !destGeo) {
@@ -129,10 +130,10 @@ const routePlannerTool = new DynamicStructuredTool({
     }
 
     // 2. 这里的 city 必填 (针对公交)，我们取 origin 的 citycode
-    const city = originGeo.citycode || "010"; // 默认北京，如果不幸获取失败
+    const routeCity = originGeo.citycode || "010"; // 默认北京，如果不幸获取失败
     const strategy = mode === 'driving' ? 10 : 0;
 
-    const routeData = await getRoute(originGeo.rawLocation, destGeo.rawLocation, mode, city, strategy); // This function returns route object directly (route.paths or route.transits)
+    const routeData = await getRoute(originGeo.rawLocation, destGeo.rawLocation, mode, routeCity, strategy); // This function returns route object directly (route.paths or route.transits)
 
     if (!routeData) return "路线规划服务异常。";
 
@@ -185,15 +186,26 @@ const routePlannerTool = new DynamicStructuredTool({
 // ---- 真实工具: 景点查找 (attractionfinder) - 基于高德搜索 ----
 const attractionFinderTool = new DynamicStructuredTool({
   name: "attractionfinder",
-  description: "用于查找附近的旅游景点或特定类型的Poi。",
+  description: "用于查找旅游景点或特定类型的POI。支持指定中心地点（如酒店名称）来获取精确的距离信息。",
   schema: z.object({
     city: z.string().describe("城市名称"),
-    keyword: z.string().optional().describe("景点关键词，若无则默认为“景点”")
+    keyword: z.string().optional().describe("景点关键词，若无则默认为“景点”"),
+    near: z.string().optional().describe("搜索中心点（如酒店名或详细地址），用于计算距离和按距离排序。例如'全季酒店(北京国贸店)'")
   }),
-  func: async ({ city, keyword = "景点" }) => {
-    console.log(`🛠️ Agent 调用高德POI搜索(景点): ${city} [${keyword}]`);
+  func: async ({ city, keyword = "景点", near }) => {
+    console.log(`🛠️ Agent 调用高德POI搜索(景点): ${city} [${keyword}] near=${near || '无'}`);
     
-    const pois = await searchPOI(keyword, city, "风景名胜");
+    // 如果指定了中心点，先地理编码获取坐标
+    let centerLocation = '';
+    if (near) {
+      const geo = await getLocationByAddress(near, city);
+      if (geo && geo.rawLocation) {
+        centerLocation = geo.rawLocation;
+        console.log(`📍 景点搜索中心点: ${near} -> ${centerLocation}`);
+      }
+    }
+    
+    const pois = await searchPOI(keyword, city, "风景名胜", 10, centerLocation);
     
     if (!pois || pois.length === 0) {
         return `在${city}未找到与“${keyword}”相关的景点。`;
@@ -204,7 +216,7 @@ const attractionFinderTool = new DynamicStructuredTool({
         type: poi.type,
         address: poi.address,
         rating: poi.rating,
-        distance: poi.distance
+        distance: poi.distance ? `${poi.distance}米` : '未知'
     })));
   }
 });
@@ -212,15 +224,26 @@ const attractionFinderTool = new DynamicStructuredTool({
 // ---- 真实工具: 餐厅查找 (restaurantfinder) - 基于高德搜索 ----
 const restaurantFinderTool = new DynamicStructuredTool({
   name: "restaurantfinder",
-  description: "用于查找附近的餐厅、美食。",
+  description: "用于查找附近的餐厅、美食。支持指定中心地点（如酒店名称）来获取精确距离。",
   schema: z.object({
-    location: z.string().describe("地点或城市名"),
-    cuisine: z.string().optional().describe("美食关键词，如“火锅”、“川菜”")
+    location: z.string().describe("城市名称"),
+    cuisine: z.string().optional().describe("美食关键词，如“火锅”、“川菜”"),
+    near: z.string().optional().describe("搜索中心点（如酒店名或详细地址），用于计算距离和按距离排序")
   }),
-  func: async ({ location, cuisine = "美食" }) => {
-    console.log(`🛠️ Agent 调用高德POI搜索(餐饮): ${location} [${cuisine}]`);
+  func: async ({ location, cuisine = "美食", near }) => {
+    console.log(`🛠️ Agent 调用高德POI搜索(餐饮): ${location} [${cuisine}] near=${near || '无'}`);
 
-    const pois = await searchPOI(cuisine, location, "餐饮服务");
+    // 如果指定了中心点，先地理编码获取坐标
+    let centerLocation = '';
+    if (near) {
+      const geo = await getLocationByAddress(near, location);
+      if (geo && geo.rawLocation) {
+        centerLocation = geo.rawLocation;
+        console.log(`📍 餐厅搜索中心点: ${near} -> ${centerLocation}`);
+      }
+    }
+
+    const pois = await searchPOI(cuisine, location, "餐饮服务", 10, centerLocation);
     
     if (!pois || pois.length === 0) {
         return `在${location}附近未找到“${cuisine}”。`;
@@ -232,6 +255,7 @@ const restaurantFinderTool = new DynamicStructuredTool({
         address: poi.address,
         rating: poi.rating,
         price: poi.cost !== "未知" ? `¥${poi.cost}` : "未知",
+        distance: poi.distance ? `${poi.distance}米` : '未知',
         tel: poi.tel
     })));
   }
